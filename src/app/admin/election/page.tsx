@@ -17,6 +17,8 @@ import {
   Edit,
   RefreshCw,
   Inbox,
+  Play,
+  Square,
   Plus,
   Trash2,
 } from "lucide-react";
@@ -142,6 +144,7 @@ export default function ElectionManagementPage() {
 
   const [selectedStatus, setSelectedStatus] = useState<string>("OPEN");
   const [statusModalOpen, setStatusModalOpen] = useState(false);
+  const [toggleModalOpen, setToggleModalOpen] = useState(false);
   const [closeModalOpen, setCloseModalOpen] = useState(false);
   const [publishModalOpen, setPublishModalOpen] = useState(false);
   const [actionBusy, setActionBusy] = useState(false);
@@ -316,6 +319,18 @@ export default function ElectionManagementPage() {
     if (ok) setCloseModalOpen(false);
   };
 
+  // One-click voting switch. Backend allows OPEN->CLOSED (stop) and
+  // DRAFT/SCHEDULED->OPEN (start); CLOSED elections can't reopen.
+  const isVotingOpen = selected?.status === "OPEN";
+  const canStartVoting = selected !== null && (selected.status === "DRAFT" || selected.status === "SCHEDULED");
+
+  const handleToggleVoting = async () => {
+    if (!selected) return;
+    const target = isVotingOpen ? "CLOSED" : "OPEN";
+    const ok = await runAction(() => adminApi.updateElectionStatus(selected.id, target));
+    if (ok) setToggleModalOpen(false);
+  };
+
   const handlePublish = async () => {
     if (!selected) return;
     const ok = await runAction(() => adminApi.publishElectionResults(selected.id));
@@ -469,6 +484,53 @@ export default function ElectionManagementPage() {
                       <Button variant="outline" size="sm" className="gap-1.5" onClick={() => setEditDates(true)}>
                         <Edit className="w-3.5 h-3.5" />
                         Edit Voting Dates
+                      </Button>
+                    )}
+                  </div>
+                </Card>
+
+                {/* Voting Switch — one-click start/stop */}
+                <Card className={`p-6 border-l-4 ${isVotingOpen ? "border-l-success-600" : "border-l-border-strong"}`}>
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <div className="flex items-center gap-3">
+                      <span className={`relative flex h-3 w-3`}>
+                        {isVotingOpen && (
+                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-success-400 opacity-75" />
+                        )}
+                        <span className={`relative inline-flex rounded-full h-3 w-3 ${isVotingOpen ? "bg-success-500" : "bg-gray-300"}`} />
+                      </span>
+                      <div>
+                        <p className="font-semibold text-text-primary">
+                          Voting is {isVotingOpen ? "ON" : "OFF"}
+                        </p>
+                        <p className="text-sm text-text-secondary">
+                          {isVotingOpen
+                            ? "Students can cast votes right now."
+                            : canStartVoting
+                              ? "Students cannot vote until you start it."
+                              : "This election has ended and cannot be reopened."}
+                        </p>
+                      </div>
+                    </div>
+                    {(isVotingOpen || canStartVoting) && (
+                      <Button
+                        variant={isVotingOpen ? "danger" : "primary"}
+                        size="md"
+                        onClick={() => setToggleModalOpen(true)}
+                        disabled={actionBusy}
+                        className="gap-1.5 shrink-0"
+                      >
+                        {isVotingOpen ? (
+                          <>
+                            <Square className="h-4 w-4" />
+                            Stop Voting
+                          </>
+                        ) : (
+                          <>
+                            <Play className="h-4 w-4" />
+                            Start Voting
+                          </>
+                        )}
                       </Button>
                     )}
                   </div>
@@ -655,6 +717,19 @@ export default function ElectionManagementPage() {
                 </Card>
 
                 {/* Modals — all wired to real endpoints */}
+                <StatusModal
+                  isOpen={toggleModalOpen}
+                  title={isVotingOpen ? "Stop Voting?" : "Start Voting?"}
+                  message={
+                    isVotingOpen
+                      ? "Students will immediately stop being able to cast votes."
+                      : "Students will immediately be able to cast votes in this election."
+                  }
+                  confirmText={isVotingOpen ? "Stop Voting" : "Start Voting"}
+                  onConfirm={handleToggleVoting}
+                  onCancel={() => setToggleModalOpen(false)}
+                />
+
                 <StatusModal
                   isOpen={statusModalOpen}
                   title="Change Election Status?"
