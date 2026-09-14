@@ -386,12 +386,12 @@ export default function CandidateProfilePage() {
                       <p className="text-sm font-semibold text-text-primary">{profile.section}</p>
                     </div>
                     <div className="p-3 rounded-xl bg-bg-tertiary">
-                      <p className="text-[10px] text-text-secondary uppercase tracking-wider mb-1">Nomination For Club 🔒</p>
-                      <p className="text-sm font-semibold text-text-primary">{profile.nominationClub || "—"}</p>
+                      <p className="text-[10px] text-text-secondary uppercase tracking-wider mb-1">Category 🔒</p>
+                      <p className="text-sm font-semibold text-text-primary">Class Representative</p>
                     </div>
                     <div className="p-3 rounded-xl bg-bg-tertiary">
-                      <p className="text-[10px] text-text-secondary uppercase tracking-wider mb-1">Position 🔒</p>
-                      <p className="text-sm font-semibold text-text-primary">{profile.contestingPosition || profile.position}</p>
+                      <p className="text-[10px] text-text-secondary uppercase tracking-wider mb-1">Constituency 🔒</p>
+                      <p className="text-sm font-semibold text-text-primary">{profile.department} {profile.year} Section {profile.section}</p>
                     </div>
                     <div className="p-3 rounded-xl bg-bg-tertiary">
                       <p className="text-[10px] text-text-secondary uppercase tracking-wider mb-1">Age 🔒</p>

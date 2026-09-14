@@ -3,6 +3,6 @@
 import React from "react";
 import { RequireProfile } from "@/components/auth/RequireProfile";
 
-export default function CandidateLayout({ children }: { children: React.ReactNode }) {
+export default function StudentLayout({ children }: { children: React.ReactNode }) {
   return <RequireProfile>{children}</RequireProfile>;
 }

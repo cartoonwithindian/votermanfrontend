@@ -231,7 +231,7 @@ export function mapApplication(app: CandidateApplication): CandidateApplicationD
     position: app.contestingPosition || app.positionName || "",
     nominationClub: app.nominationClub || null,
     contestingPosition: app.contestingPosition || null,
-    category: app.category || "CLUB",
+    category: app.category || "CR",
     electionId: app.electionId ?? null,
     email: app.email || "",
     phone: app.phone || "",

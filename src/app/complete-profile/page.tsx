@@ -1,0 +1,201 @@
+"use client";
+
+import { useState, Suspense } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { GraduationCap, Loader2 } from "lucide-react";
+import { AuthLayout } from "@/components/auth/AuthLayout";
+import { AuthCard } from "@/components/auth/AuthCard";
+import { AuthHeader } from "@/components/auth/AuthHeader";
+import { Button } from "@/components/ui/Button";
+import { Input } from "@/components/ui/Input";
+import { api, ApiError } from "@/lib/api/client";
+
+const COURSES = ["BBA", "BCA", "BCOM", "MBA", "MCA"];
+const YEARS = ["1st Year", "2nd Year", "3rd Year", "4th Year"];
+const SECTIONS = ["A", "B", "C", "D", "E", "F"];
+
+const DASHBOARDS: Record<string, string> = {
+  student: "/student/dashboard",
+  candidate: "/candidate/dashboard",
+};
+
+function CompleteProfileForm() {
+  const router = useRouter();
+  const params = useSearchParams();
+
+  const nextRaw = params.get("next") || "";
+  const next =
+    nextRaw.startsWith("/") && !nextRaw.startsWith("//")
+      ? nextRaw
+      : DASHBOARDS.student;
+
+  const [rollNumber, setRollNumber] = useState("");
+  const [course, setCourse] = useState("");
+  const [year, setYear] = useState("");
+  const [section, setSection] = useState("");
+  const [error, setError] = useState("");
+  const [saving, setSaving] = useState(false);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError("");
+
+    const roll = rollNumber.trim();
+    if (roll.length < 3 || roll.length > 64) {
+      setError("Please enter a valid roll / enrollment number (3-64 characters).");
+      return;
+    }
+    if (!course) {
+      setError("Please select your course.");
+      return;
+    }
+    if (!year) {
+      setError("Please select your year.");
+      return;
+    }
+    if (!section) {
+      setError("Please select your section.");
+      return;
+    }
+
+    setSaving(true);
+    try {
+      await api.post("/auth/profile", {
+        rollNumber: roll,
+        department: course,
+        year,
+        section,
+      });
+      router.replace(next);
+    } catch (err) {
+      setError(
+        err instanceof ApiError
+          ? err.message
+          : "Could not save your profile. Please try again."
+      );
+      setSaving(false);
+    }
+  };
+
+  const selectClass =
+    "w-full px-4 py-2.5 text-sm bg-white dark:bg-[#252540] border border-border rounded-xl text-text-primary focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500";
+
+  return (
+    <AuthLayout>
+      <AuthCard>
+        <div className="text-center mb-6">
+          <div className="w-12 h-12 rounded-full bg-primary-100 flex items-center justify-center mx-auto mb-4">
+            <GraduationCap className="w-6 h-6 text-primary-600" />
+          </div>
+          <AuthHeader
+            title="Complete Your Profile"
+            subtitle="One-time step — your roll number, course, year and section"
+          />
+        </div>
+
+        {error && (
+          <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
+            {error}
+          </div>
+        )}
+
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <Input
+            id="profile-roll"
+            label="Roll / Enrollment Number"
+            type="text"
+            value={rollNumber}
+            onChange={(e) => setRollNumber(e.target.value)}
+            placeholder="e.g. 2SI21CS001"
+            required
+            autoFocus
+          />
+
+          <div className="space-y-1.5">
+            <label htmlFor="profile-course" className="text-xs font-medium text-text-secondary">
+              Course
+            </label>
+            <select
+              id="profile-course"
+              value={course}
+              onChange={(e) => setCourse(e.target.value)}
+              className={selectClass}
+              required
+            >
+              <option value="">Select course</option>
+              {COURSES.map((c) => (
+                <option key={c} value={c}>{c}</option>
+              ))}
+            </select>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1.5">
+              <label htmlFor="profile-year" className="text-xs font-medium text-text-secondary">
+                Year
+              </label>
+              <select
+                id="profile-year"
+                value={year}
+                onChange={(e) => setYear(e.target.value)}
+                className={selectClass}
+                required
+              >
+                <option value="">Select year</option>
+                {YEARS.map((y) => (
+                  <option key={y} value={y}>{y}</option>
+                ))}
+              </select>
+            </div>
+            <div className="space-y-1.5">
+              <label htmlFor="profile-section" className="text-xs font-medium text-text-secondary">
+                Section
+              </label>
+              <select
+                id="profile-section"
+                value={section}
+                onChange={(e) => setSection(e.target.value)}
+                className={selectClass}
+                required
+              >
+                <option value="">Select section</option>
+                {SECTIONS.map((s) => (
+                  <option key={s} value={s}>{s}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          <Button
+            type="submit"
+            variant="primary"
+            className="w-full"
+            disabled={saving}
+          >
+            {saving ? (
+              <span className="flex items-center gap-2">
+                <Loader2 className="w-4 h-4 animate-spin" />
+                Saving...
+              </span>
+            ) : (
+              "Save & Continue"
+            )}
+          </Button>
+        </form>
+
+        <p className="text-center text-xs text-gray-500 mt-4">
+          These details lock your class identity for voting and candidacy. Contact the
+          administrator if you need to change them later.
+        </p>
+      </AuthCard>
+    </AuthLayout>
+  );
+}
+
+export default function CompleteProfilePage() {
+  return (
+    <Suspense fallback={null}>
+      <CompleteProfileForm />
+    </Suspense>
+  );
+}

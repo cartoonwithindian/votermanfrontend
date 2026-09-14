@@ -15,26 +15,6 @@ import { getRollNumber } from "@/lib/roll-number";
 
 const DEPARTMENT_OPTIONS = ["BBA", "BCA", "BCOM", "MBA", "MCA"];
 
-/** Official club nomination form — Nomination For Club (required). */
-const NOMINATION_CLUBS = [
-  "SAHITYASHALA (LITERATURE AND POETRY CLUB) & RACHNAKAR (CREATIVE CLUB)",
-  "BOSCO SPARTANS (SPORTS CLUB)",
-  "PUBLICATION COMMITTEE",
-  "ECO CLUB",
-  "TECHNO SPARKS (TECHNO CLUB)",
-  "AARAMBH (ENTREPRENEURSHIP CLUB)",
-  "SOCIAL SYNERGY (SOCIAL MEDIA CLUB)",
-  "SOCIAL OUTREACH (PARIVARTAN CLUB)",
-  "CO-CURRICULAR & EXTRA CO-CURRICULAR ACTIVITIES CLUB",
-  "JHANKAAR (CULTURAL CLUB)",
-];
-
-/** Official club nomination form — Applied for the Position (required). */
-const CONTESTING_POSITIONS = [
-  "Vice President (Batch 2020)",
-  "Secretary (Batch 2021)",
-];
-
 const DECLARATION_TEXT =
   "I hereby declare that all the information given above is true and I agree that my candidature will stand disqualified if any of the above information is found to be false or misrepresented. I also agree to abide by the Guidelines of Bosco Technical Training Society Affiliated to Guru Gobind Singh Indraprastha University.";
 
@@ -88,7 +68,7 @@ const INITIAL_FORM: FormData = {
   department: "",
   year: "",
   section: "",
-  category: "CLUB",
+  category: "CR",
   nominationClub: "",
   contestingPosition: "",
   email: "",
@@ -125,13 +105,20 @@ export default function CandidateApplyPage() {
         const accountName = me.user.fullName || me.user.name || "";
         const accountEmail = me.user.email || "";
         const storedRoll =
+          me.user.rollNumber ||
           getRollNumber("candidate", accountEmail) || getRollNumber("student", accountEmail);
+        const profileDept = me.user.department || "";
+        const profileYear = me.user.year || "";
+        const profileSection = me.user.section || "";
 
         setFormData((prev) => ({
           ...prev,
           name: prev.name || accountName,
           email: prev.email || accountEmail,
           enrollmentNumber: prev.enrollmentNumber || storedRoll || "",
+          department: prev.department || profileDept,
+          year: prev.year || profileYear,
+          section: prev.section || profileSection,
         }));
       } catch {
         // Not fatal — the user can type their details manually.
@@ -237,10 +224,6 @@ export default function CandidateApplyPage() {
     if (!formData.department) newErrors.department = "Department is required";
     if (!formData.year) newErrors.year = "Year is required";
     if (!formData.section) newErrors.section = "Section is required";
-    if (formData.category === "CLUB") {
-      if (!formData.nominationClub) newErrors.nominationClub = "Please select the club you are nominating for";
-      if (!formData.contestingPosition) newErrors.contestingPosition = "Please select the position you are applying for";
-    }
     if (!formData.age.trim()) newErrors.age = "Age is required";
     if (!formData.dateOfBirth.trim()) newErrors.dateOfBirth = "Date of birth is required";
     if (!formData.gender) newErrors.gender = "Gender is required";
@@ -298,15 +281,6 @@ export default function CandidateApplyPage() {
 
   const handleSubmit = async () => {
     if (!validateStep3()) return;
-    if (formData.category === "CLUB") {
-      if (!formData.nominationClub || !formData.contestingPosition) {
-        setErrors({
-          nominationClub: !formData.nominationClub ? "Please select the club you are nominating for" : "",
-          contestingPosition: !formData.contestingPosition ? "Please select the position you are applying for" : "",
-        });
-        return;
-      }
-    }
     setIsSubmitting(true);
     try {
       await submitApplication({
@@ -315,9 +289,9 @@ export default function CandidateApplyPage() {
         department: formData.department,
         year: formData.year,
         section: formData.section,
-        category: formData.category,
-        nominationClub: formData.category === "CLUB" ? formData.nominationClub : "",
-        contestingPosition: formData.category === "CLUB" ? formData.contestingPosition : "",
+        category: "CR",
+        nominationClub: "",
+        contestingPosition: "",
         email: formData.email.trim(),
         phone: formData.phone.trim(),
         profilePhotoUrl: formData.photo,
@@ -402,26 +376,13 @@ export default function CandidateApplyPage() {
                   <div className="flex justify-between text-sm">
                     <span className="text-text-secondary">Category</span>
                     <span className="font-medium text-text-primary">
-                      {formData.category === "CR" ? "Class Representative" : "Club / Society"}
+                      Class Representative
                     </span>
                   </div>
-                  {formData.category === "CLUB" ? (
-                    <>
-                      <div className="flex justify-between text-sm">
-                        <span className="text-text-secondary">Club</span>
-                        <span className="font-medium text-text-primary text-right max-w-[220px]">{formData.nominationClub || "—"}</span>
-                      </div>
-                      <div className="flex justify-between text-sm">
-                        <span className="text-text-secondary">Position</span>
-                        <span className="font-medium text-text-primary">{formData.contestingPosition || "—"}</span>
-                      </div>
-                    </>
-                  ) : (
-                    <div className="flex justify-between text-sm">
-                      <span className="text-text-secondary">Constituency</span>
-                      <span className="font-medium text-text-primary">{formData.department} {formData.year} Section {formData.section}</span>
-                    </div>
-                  )}
+                  <div className="flex justify-between text-sm">
+                    <span className="text-text-secondary">Constituency</span>
+                    <span className="font-medium text-text-primary">{formData.department} {formData.year} Section {formData.section}</span>
+                  </div>
                   <div className="flex justify-between text-sm">
                     <span className="text-text-secondary">Status</span>
                     <Badge variant="warning" size="sm">Under Review</Badge>
@@ -629,90 +590,20 @@ export default function CandidateApplyPage() {
                 </div>
               </div>
 
-              {/* Election Category — what kind of seat are they applying for */}
+              {/* Election Category — Class Representative only */}
               <div>
                 <label className="block text-xs font-medium text-text-secondary mb-1.5">
                   Election Category <span className="text-error-500">*</span>
                 </label>
-                <div className="grid grid-cols-2 gap-2">
-                  <button
-                    type="button"
-                    onClick={() => handleChange("category", "CLUB")}
-                    className={`px-3 py-2.5 rounded-xl border text-sm font-medium text-left transition-colors ${
-                      formData.category === "CLUB"
-                        ? "border-primary-500 bg-primary-50 text-primary-700"
-                        : "border-border text-text-secondary hover:bg-bg-tertiary"
-                    }`}
-                  >
-                    Club / Society
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleChange("category", "CR")}
-                    className={`px-3 py-2.5 rounded-xl border text-sm font-medium text-left transition-colors ${
-                      formData.category === "CR"
-                        ? "border-primary-500 bg-primary-50 text-primary-700"
-                        : "border-border text-text-secondary hover:bg-bg-tertiary"
-                    }`}
-                  >
-                    Class Representative
-                  </button>
+                <div className="px-3 py-2.5 rounded-xl border border-primary-500 bg-primary-50 text-sm font-medium text-primary-700">
+                  Class Representative
                 </div>
                 <p className="text-xs text-text-muted mt-1.5">
-                  {formData.category === "CR"
-                    ? "Stand for your department, year and section seat. Your constituency will be matched to the details above."
-                    : "Stand for an official club / society leadership position."}
+                  Stand for your department, year and section seat. Your constituency will be matched to the details above.
                 </p>
               </div>
 
-              {/* Club & Society Details — official nomination form fields */}
-              {formData.category === "CLUB" ? (
-              <div className="bg-bg-tertiary rounded-xl p-4 space-y-4">
-                <p className="text-sm font-semibold text-text-primary">Club & Society Details</p>
-
-                <div>
-                  <label className="block text-xs font-medium text-text-secondary mb-1.5">
-                    Nomination For Club <span className="text-error-500">*</span>
-                  </label>
-                  <select
-                    value={formData.nominationClub}
-                    onChange={(e) => handleChange("nominationClub", e.target.value)}
-                    className={`w-full px-4 py-2.5 rounded-xl border text-sm text-text-primary focus:outline-none focus:ring-2 focus:ring-primary-500 ${
-                      errors.nominationClub ? "border-error-500" : "border-border"
-                    }`}
-                  >
-                    <option value="">Select club</option>
-                    {NOMINATION_CLUBS.map((club) => (
-                      <option key={club} value={club}>{club}</option>
-                    ))}
-                  </select>
-                  {errors.nominationClub && (
-                    <p className="text-xs text-error-600 mt-1">{errors.nominationClub}</p>
-                  )}
-                </div>
-
-                <div>
-                  <label className="block text-xs font-medium text-text-secondary mb-1.5">
-                    Applied for the Position <span className="text-error-500">*</span>
-                  </label>
-                  <select
-                    value={formData.contestingPosition}
-                    onChange={(e) => handleChange("contestingPosition", e.target.value)}
-                    className={`w-full px-4 py-2.5 rounded-xl border text-sm text-text-primary focus:outline-none focus:ring-2 focus:ring-primary-500 ${
-                      errors.contestingPosition ? "border-error-500" : "border-border"
-                    }`}
-                  >
-                    <option value="">Select position</option>
-                    {CONTESTING_POSITIONS.map((pos) => (
-                      <option key={pos} value={pos}>{pos}</option>
-                    ))}
-                  </select>
-                  {errors.contestingPosition && (
-                    <p className="text-xs text-error-600 mt-1">{errors.contestingPosition}</p>
-                  )}
-                </div>
-              </div>
-              ) : (
+              {/* Class Representative Seat info */}
               <div className="bg-info-50 border border-info-100 rounded-xl p-4">
                 <p className="text-sm font-semibold text-primary-700 mb-1.5">
                   Class Representative Seat
@@ -729,7 +620,6 @@ export default function CandidateApplyPage() {
                   matching this department, year and section once your application is approved.
                 </p>
               </div>
-              )}
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
