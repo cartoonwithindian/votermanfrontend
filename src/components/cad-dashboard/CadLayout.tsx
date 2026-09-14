@@ -35,7 +35,7 @@ export const CadLayout: React.FC<{ children: React.ReactNode }> = ({ children })
         const me = await getMe();
         if (cancelled) return;
         if (!me.authenticated) {
-          router.replace("/login?role=cad");
+          router.replace("/login/cad");
           return;
         }
         const r = me.user?.role ?? "";
@@ -43,7 +43,7 @@ export const CadLayout: React.FC<{ children: React.ReactNode }> = ({ children })
         if (r === "CAD" || r === "ADMIN") setState("ok");
         else setState("denied");
       } catch {
-        if (!cancelled) router.replace("/login?role=cad");
+        if (!cancelled) router.replace("/login/cad");
       }
     })();
     return () => {

@@ -46,6 +46,12 @@ export function RoleRegisterPage({ portal }: { portal: RegisterPortal }) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [notice, setNotice] = useState("");
   const [error, setError] = useState("");
+  const [tempPassword] = useState(() => {
+    const chars = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789!@#$%&*";
+    const arr = new Uint8Array(20);
+    crypto.getRandomValues(arr);
+    return Array.from(arr, (b) => chars[b % chars.length]).join("");
+  });
 
   if (process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY) {
     const callbackUrl = `/auth/clerk-callback?role=${encodeURIComponent(selectedRole)}`;
@@ -106,8 +112,8 @@ export function RoleRegisterPage({ portal }: { portal: RegisterPortal }) {
         body: JSON.stringify({
           email: normalized,
           username: normalized.split("@")[0],
-          password: "TempPassword123!",
-          confirmPassword: "TempPassword123!",
+          password: tempPassword,
+          confirmPassword: tempPassword,
           role: selectedRole.toUpperCase(),
         }),
       });
@@ -155,7 +161,7 @@ export function RoleRegisterPage({ portal }: { portal: RegisterPortal }) {
           otp: code.trim(),
           username: normalized.split("@")[0],
           fullName: fullName.trim() || normalized.split("@")[0],
-          password: "TempPassword123!",
+          password: tempPassword,
           role: selectedRole.toUpperCase(),
         }),
       });

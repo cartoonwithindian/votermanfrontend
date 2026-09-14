@@ -7,6 +7,7 @@ import { CandidateNavbar } from "./CandidateNavbar";
 import { MobileNav } from "@/components/layout/MobileNav";
 import { getMyApplication } from "@/lib/candidate-api";
 import { getMe } from "@/lib/api/v1";
+import { getDashboardRoute } from "@/lib/dashboard-route";
 import type { ApplicationStatus } from "@/lib/candidate-dashboard-data";
 
 export interface CandidateLayoutProps {
@@ -22,7 +23,6 @@ const PROTECTED_ROUTES = [
   "/candidate/manifesto",
   "/candidate/preview",
   "/candidate/settings",
-  "/student/help",
 ];
 
 function canAccessRoute(pathname: string, status: ApplicationStatus): boolean {
@@ -51,6 +51,7 @@ export const CandidateLayout: React.FC<CandidateLayoutProps> = ({
     let alive = true;
     (async () => {
       let currentStatus: ApplicationStatus = "draft";
+      let userRole = "";
       try {
         // Identity comes from both the candidate application and the account:
         // application name/enrollment (once applied) take priority, otherwise
@@ -68,6 +69,7 @@ export const CandidateLayout: React.FC<CandidateLayoutProps> = ({
             setUserName(me?.user?.fullName || me?.user?.name || "Candidate");
             setUserId(me?.user?.rollNumber || "");
           }
+          userRole = me?.user?.role || "";
         }
       } catch {
         if (alive) {
@@ -78,6 +80,12 @@ export const CandidateLayout: React.FC<CandidateLayoutProps> = ({
 
       if (!alive) return;
       setStatus(currentStatus);
+
+      // Role guard: only CANDIDATE and ADMIN may access the candidate portal
+      if (userRole && userRole !== "CANDIDATE" && userRole !== "ADMIN") {
+        router.replace(getDashboardRoute(userRole));
+        return;
+      }
 
       if (!canAccessRoute(pathname, currentStatus)) {
         router.replace("/candidate/status");
