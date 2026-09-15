@@ -24,6 +24,7 @@ export interface BallotCandidate {
   id: number;
   name: string;
   description: string;
+  photo: string | null;
 }
 
 export interface BallotPosition {
@@ -71,6 +72,7 @@ interface CandidateRow {
   id: number;
   name: string;
   description?: string | null;
+  image_url?: string | null;
 }
 
 interface ConstituencyRow {
@@ -120,6 +122,7 @@ export async function fetchBallot(electionId: number): Promise<BallotPosition[]>
         id: Number(c.id),
         name: c.name || "",
         description: c.description || "",
+        photo: c.image_url || null,
       }));
       if (mapped.length === 0) continue;
       out.push({
@@ -147,6 +150,7 @@ export async function fetchBallot(electionId: number): Promise<BallotPosition[]>
           id: Number(c.id),
           name: c.name || "",
           description: c.description || "",
+          photo: c.image_url || null,
         }));
         if (mapped.length === 0) continue;
         out.push({
@@ -265,6 +269,7 @@ export function mapBallotToVotingPositions(
       department: "",
       year: "",
       photoInitials: initialsOf(c.name),
+      photo: c.photo,
       campaignSymbol: "",
       shortManifesto: c.description,
     })),

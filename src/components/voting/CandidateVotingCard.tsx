@@ -32,14 +32,22 @@ export const CandidateVotingCard: React.FC<CandidateVotingCardProps> = ({
     >
       <div className="p-4 sm:p-5">
         <div className="flex items-start gap-3 mb-3">
-          <div
-            className={cn(
-              "w-12 h-12 rounded-xl flex items-center justify-center font-bold text-white text-sm shrink-0",
-              isSelected ? "bg-primary-600" : "bg-primary-400"
-            )}
-          >
-            {candidate.photoInitials}
-          </div>
+          {candidate.photo ? (
+            <img
+              src={candidate.photo}
+              alt={candidate.name}
+              className="w-12 h-12 rounded-xl object-cover shrink-0"
+            />
+          ) : (
+            <div
+              className={cn(
+                "w-12 h-12 rounded-xl flex items-center justify-center font-bold text-white text-sm shrink-0",
+                isSelected ? "bg-primary-600" : "bg-primary-400"
+              )}
+            >
+              {candidate.photoInitials}
+            </div>
+          )}
           <div className="flex-1 min-w-0">
             <h4 className="font-semibold text-text-primary text-sm leading-tight">
               {candidate.name}

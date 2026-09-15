@@ -63,6 +63,8 @@ export const candidateApi = {
     api.patch<{ success: boolean; application: unknown }>(`/admin/candidate-applications/${id}/reject`, { reason }),
   requestApplicationChanges: (id: string, reason: string) =>
     api.patch<{ success: boolean; application: unknown }>(`/admin/candidate-applications/${id}/request-changes`, { reason }),
+  assignBallot: (id: string, context?: { electionId?: number | string; constituencyId?: number | string }) =>
+    api.post<{ success: boolean; application: unknown }>(`/admin/candidate-applications/${id}/assign-ballot`, context || {}),
 
   getPositions: () => api.get<string[]>("/candidates/positions"),
   getDepartments: () => api.get<string[]>("/candidates/departments"),

@@ -11,6 +11,7 @@ export interface VotingCandidate {
   department: string;
   year: string;
   photoInitials: string;
+  photo?: string | null;
   campaignSymbol: string;
   shortManifesto: string;
 }

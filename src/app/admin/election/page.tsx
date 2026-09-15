@@ -5,7 +5,7 @@ import { AdminLayout } from "@/components/admin-dashboard/AdminLayout";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
-import { adminApi, type AdminElectionRecord, type AdminConstituencyRecord } from "@/lib/api/admin";
+import { adminApi, type AdminElectionRecord, type AdminConstituencyRecord, type ApprovedCandidateRow } from "@/lib/api/admin";
 import { CourseSelect } from "@/components/ui/CourseSelect";
 import { BatchSelect } from "@/components/ui/BatchSelect";
 import { seatLabel } from "@/lib/class-data";
@@ -162,6 +162,10 @@ export default function ElectionManagementPage() {
   const [crSaving, setCrSaving] = useState(false);
   const [crError, setCrError] = useState("");
   const [crToast, setCrToast] = useState<{ type: "success" | "error"; message: string } | null>(null);
+  // Approved candidates in the batch currently picked in the Add Constituency modal
+  const [crCandidates, setCrCandidates] = useState<ApprovedCandidateRow[]>([]);
+  const [crCandidatesLoading, setCrCandidatesLoading] = useState(false);
+  const [crCandidatesError, setCrCandidatesError] = useState("");
 
   // Create election
   const [createModalOpen, setCreateModalOpen] = useState(false);
@@ -251,6 +255,43 @@ export default function ElectionManagementPage() {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     loadConstituencies();
   }, [loadConstituencies]);
+
+  // Load approved candidates for the batch picked in the Add Constituency modal
+  useEffect(() => {
+    if (!crModalOpen || !crForm.department || !crForm.year) {
+      setCrCandidates([]);
+      setCrCandidatesError("");
+      setCrCandidatesLoading(false);
+      return;
+    }
+    let cancelled = false;
+    setCrCandidatesLoading(true);
+    setCrCandidatesError("");
+    adminApi
+      .getApprovedCandidates({
+        department: crForm.department,
+        year: crForm.year,
+        ...(crForm.section ? { section: crForm.section } : {}),
+      })
+      .then((res) => {
+        if (cancelled) return;
+        const rows: ApprovedCandidateRow[] = Array.isArray(res)
+          ? res
+          : ((res as { data?: ApprovedCandidateRow[] }).data as ApprovedCandidateRow[]) || [];
+        setCrCandidates(rows);
+      })
+      .catch((e) => {
+        if (cancelled) return;
+        setCrCandidates([]);
+        setCrCandidatesError(e instanceof Error ? e.message : "Unable to load candidates for this batch.");
+      })
+      .finally(() => {
+        if (!cancelled) setCrCandidatesLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [crModalOpen, crForm.department, crForm.year, crForm.section]);
 
   const showCrToast = (type: "success" | "error", message: string) => {
     setCrToast({ type, message });
@@ -831,9 +872,33 @@ export default function ElectionManagementPage() {
                             onChange={(b) => {
                               setCrForm((f) => ({ ...f, year: b.year, section: b.section }));
                             }}
-                            includeSectionless={false}
                           />
                         </div>
+                      </div>
+                      <div className="mb-4">
+                        <p className="block text-sm font-medium text-text-primary mb-1">
+                          Candidates in this batch{crCandidates.length > 0 ? ` (${crCandidates.length})` : ""}
+                        </p>
+                        {crCandidatesLoading ? (
+                          <p className="text-sm text-text-muted">Loading candidates…</p>
+                        ) : crCandidatesError ? (
+                          <p className="text-sm text-error-600 bg-error-50 border border-error-200 rounded-xl px-3 py-2">
+                            {crCandidatesError}
+                          </p>
+                        ) : !crForm.department || !crForm.year ? (
+                          <p className="text-sm text-text-muted">Select a course and batch to see candidates.</p>
+                        ) : crCandidates.length === 0 ? (
+                          <p className="text-sm text-text-muted">No approved candidates in this batch yet.</p>
+                        ) : (
+                          <ul className="max-h-40 overflow-y-auto rounded-xl border border-border-strong">
+                            {crCandidates.map((c) => (
+                              <li key={c.id} className="flex items-center justify-between gap-2 border-b border-border-strong px-3 py-2 text-sm last:border-b-0">
+                                <span className="font-medium text-text-primary">{c.full_name}</span>
+                                <span className="text-text-muted">{c.position_name}</span>
+                              </li>
+                            ))}
+                          </ul>
+                        )}
                       </div>
                       {crError && (
                         <p className="mb-4 text-sm text-error-600 bg-error-50 border border-error-200 rounded-xl px-3 py-2">
@@ -844,7 +909,7 @@ export default function ElectionManagementPage() {
                         <Button variant="outline" size="sm" onClick={() => setCrModalOpen(false)}>
                           Cancel
                         </Button>
-                        <Button variant="primary" size="sm" onClick={handleCreateConstituency} disabled={crSaving}>
+                        <Button variant="primary" size="sm" onClick={handleCreateConstituency} disabled={crSaving || !crForm.department || !crForm.year}>
                           {crSaving ? "Creating…" : "Add Constituency"}
                         </Button>
                       </div>

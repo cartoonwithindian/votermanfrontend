@@ -35,10 +35,18 @@ export const CandidateCard: React.FC<CandidateCardProps> = ({
       className
     )}>
       {/* Photo area */}
-      <div className="relative h-44 w-full bg-gradient-to-br from-primary-100 to-primary-50 flex items-center justify-center">
-        <div className="w-20 h-20 rounded-2xl bg-primary-600 flex items-center justify-center font-bold text-white text-2xl shadow-sm">
-          {candidate.photoInitials}
-        </div>
+      <div className="relative h-44 w-full bg-gradient-to-br from-primary-100 to-primary-50 flex items-center justify-center overflow-hidden">
+        {candidate.profilePhotoUrl ? (
+          <img
+            src={candidate.profilePhotoUrl}
+            alt={candidate.name}
+            className="h-full w-full object-cover"
+          />
+        ) : (
+          <div className="w-20 h-20 rounded-2xl bg-primary-600 flex items-center justify-center font-bold text-white text-2xl shadow-sm">
+            {candidate.photoInitials}
+          </div>
+        )}
 
         {/* Campaign symbol */}
         <div className="absolute top-3 right-3 w-9 h-9 rounded-xl bg-white/90 backdrop-blur-sm flex items-center justify-center text-xl shadow-sm border border-white/50">

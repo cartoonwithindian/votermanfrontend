@@ -223,3 +223,14 @@ export async function updateApplicationStatus(
     constituencyId: app?.constituencyId ?? null,
   };
 }
+
+/**
+ * Place an already-approved CR application onto its ballot.
+ * POST /api/v1/admin/candidate-applications/:id/assign-ballot
+ */
+export async function assignApplicationToBallot(
+  id: string,
+  context?: { electionId?: number | string; constituencyId?: number | string }
+): Promise<void> {
+  await candidateApi.assignBallot(id, context);
+}

@@ -16,7 +16,6 @@ interface CandidateRow {
   section: string | null;
   description: string | null;
   image_url: string | null;
-  is_active: boolean;
   position_id: number;
   position_name: string;
   election_id: number;

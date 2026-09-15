@@ -233,13 +233,14 @@ export const adminApi = {
 
   // ---- Candidate Applications ----
   // Get approved candidates for admin position management
-  getApprovedCandidates: (params?: { position_id?: number; department?: string; section?: string }) => {
+  getApprovedCandidates: (params?: { position_id?: number; department?: string; section?: string; year?: string }) => {
     const queryParams = new URLSearchParams();
     if (params?.position_id) queryParams.set('position_id', String(params.position_id));
     if (params?.department) queryParams.set('department', params.department);
     if (params?.section) queryParams.set('section', params.section);
+    if (params?.year) queryParams.set('year', params.year);
     const query = queryParams.toString();
-    return api.get<{ data: ApprovedCandidateRow[] }>(`/admin/candidates/approved${query ? '?' + query : ''}`);
+    return api.get<{ data: ApprovedCandidateRow[] }>(`/admin/candidate-applications/approved${query ? '?' + query : ''}`);
   },
 };
 
@@ -251,7 +252,8 @@ export interface ApprovedCandidateRow {
   department: string;
   year: string;
   section: string;
-  position_id: number;
-  position_name: string;
+  position_id: number | null;
+  position_name: string | null;
+  category: string;
   status: string;
 }

@@ -24,13 +24,13 @@ type Mode = "login" | "register";
 /**
  * Single home for Student + Candidate auth. Sign in and registration live on
  * one page behind a role toggle; the backend's ACTUAL account role decides
- * where the user lands — the picked portal/tab never does. STUDENT (and any
- * other non-elevated role) always lands on the student dashboard; CANDIDATE
- * lands on the candidate dashboard (its layout bounces unapproved applicants
- * to /candidate/status).
+ * where the user lands. CANDIDATE is only earned on approval — until then the
+ * account still holds the STUDENT role — so a candidate-portal login with a
+ * STUDENT role is a waiting applicant: land on /candidate/status (the waiting
+ * room), never the student dashboard. A non-elevated STUDENT via the student
+ * portal still lands on the student dashboard; ADMIN/CAD land on their own.
  */
-function destinationFor(_portal: Portal, backendRole: string | undefined): string {
-  void _portal;
+function destinationFor(portal: Portal, backendRole: string | undefined): string {
   switch (String(backendRole || "").toUpperCase()) {
     case "ADMIN":
       return "/admin/dashboard";
@@ -39,7 +39,9 @@ function destinationFor(_portal: Portal, backendRole: string | undefined): strin
     case "CANDIDATE":
       return "/candidate/dashboard";
     default:
-      return "/student/dashboard";
+      // STUDENT (or unknown): via the candidate portal this is a pending,
+      // unapproved applicant — send them to the candidate waiting room.
+      return portal === "candidate" ? "/candidate/status" : "/student/dashboard";
   }
 }
 

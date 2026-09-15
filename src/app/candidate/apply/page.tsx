@@ -12,7 +12,7 @@ import {
   getMyApplication,
 } from "@/lib/candidate-api";
 import { getRollNumber } from "@/lib/roll-number";
-import { seatLabel, normalizeCourse } from "@/lib/class-data";
+import { seatLabel, normalizeCourse, getBatchesForCourse } from "@/lib/class-data";
 
 import { CourseSelect } from "@/components/ui/CourseSelect";
 import { BatchSelect } from "@/components/ui/BatchSelect";
@@ -256,7 +256,10 @@ export default function CandidateApplyPage() {
     if (!formData.enrollmentNumber.trim()) newErrors.enrollmentNumber = "Enrollment number is required";
     if (!formData.department) newErrors.department = "Course is required";
     if (!formData.year) newErrors.year = "Batch is required";
-    if (!formData.section) newErrors.section = "Batch is required";
+    const hasSectionedBatches =
+      !!formData.department &&
+      getBatchesForCourse(formData.department as Course).some((b) => b.section);
+    if (hasSectionedBatches && !formData.section) newErrors.section = "Batch is required";
     if (!formData.age.trim()) newErrors.age = "Age is required";
     if (!formData.dateOfBirth.trim()) newErrors.dateOfBirth = "Date of birth is required";
     if (!formData.gender) newErrors.gender = "Gender is required";

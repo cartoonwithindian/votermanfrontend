@@ -89,9 +89,17 @@ function CompareContent() {
             {candidates.map((candidate) => (
               <div key={candidate.id} className="bg-white border border-border rounded-2xl p-4 shadow-sm">
                 <div className="flex items-start gap-3">
-                  <div className="w-12 h-12 rounded-xl bg-primary-600 flex items-center justify-center font-bold text-white text-sm shrink-0">
-                    {candidate.photoInitials}
-                  </div>
+                  {candidate.profilePhotoUrl ? (
+                    <img
+                      src={candidate.profilePhotoUrl}
+                      alt={candidate.name}
+                      className="w-12 h-12 rounded-xl object-cover shrink-0"
+                    />
+                  ) : (
+                    <div className="w-12 h-12 rounded-xl bg-primary-600 flex items-center justify-center font-bold text-white text-sm shrink-0">
+                      {candidate.photoInitials}
+                    </div>
+                  )}
                   <div className="flex-1 min-w-0">
                     <h3 className="font-medium text-text-primary truncate">{candidate.name}</h3>
                     <p className="text-xs text-text-secondary">{candidate.position}</p>
