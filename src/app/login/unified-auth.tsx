@@ -470,18 +470,19 @@ export function UnifiedAuthPage() {
           </div>
         )}
 
+        {CLERK_ENABLED && (
+          <>
+            <GoogleSignInButton role={portal} />
+            <div className="flex items-center gap-3 text-xs text-text-muted my-4">
+              <span className="flex-1 border-t border-border" />
+              or continue with email
+              <span className="flex-1 border-t border-border" />
+            </div>
+          </>
+        )}
+
         {mode === "login" ? (
           <div className="space-y-4">
-            {CLERK_ENABLED && (
-              <>
-                <GoogleSignInButton role={portal} />
-                <div className="flex items-center gap-3 text-xs text-text-muted">
-                  <span className="flex-1 border-t border-border" />
-                  or continue with email
-                  <span className="flex-1 border-t border-border" />
-                </div>
-              </>
-            )}
             <Input
               id="auth-email"
               label="Email address"
