@@ -2,14 +2,13 @@
 
 import React from "react";
 import {
-  type CandidatePosition,
   type CandidateDepartment,
   type CandidateYear,
 } from "@/lib/candidate-data";
 import { COURSES, ALL_YEARS } from "@/lib/class-data";
 
 interface Filters {
-  position: string;
+  gender: string;
   department: string;
   year: string;
 }
@@ -19,13 +18,12 @@ interface CandidateFiltersProps {
   onFilterChange: (filters: Filters) => void;
 }
 
-const positionOptions = [
-  { value: "all", label: "All Positions" },
-  { value: "President", label: "President" },
-  { value: "Vice President", label: "Vice President" },
-  { value: "General Secretary", label: "General Secretary" },
-  { value: "Treasurer", label: "Treasurer" },
-  { value: "Cultural Secretary", label: "Cultural Secretary" },
+// Gender filter options for student-facing candidate listing
+// Maps to database gender values: Male -> Boys, Female -> Girls, Other stays as Other
+const genderOptions = [
+  { value: "all", label: "All" },
+  { value: "girls", label: "Girls" },
+  { value: "boys", label: "Boys" },
 ];
 
 const departmentOptions = [
@@ -42,30 +40,36 @@ export const CandidateFilters: React.FC<CandidateFiltersProps> = ({
   filters,
   onFilterChange,
 }) => {
-  const handleChange = (field: keyof Filters, value: string) => {
-    onFilterChange({ ...filters, [field]: value });
+  const handleChange = (key: keyof Filters, value: string) => {
+    onFilterChange({ ...filters, [key]: value });
   };
 
   return (
-    <div className="flex flex-wrap gap-3">
-      <div className="min-w-[160px]">
+    <div className="flex flex-wrap items-end gap-4">
+      {/* Gender filter - replaces Position filter */}
+      <div className="min-w-[140px]">
         <label className="text-[10px] font-medium text-text-secondary uppercase tracking-wider block mb-1">
-          Position
+          Gender
         </label>
-        <select
-          value={filters.position}
-          onChange={(e) => handleChange("position", e.target.value)}
-          className="w-full px-3 py-2 rounded-xl border border-border text-sm text-text-primary bg-white focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-        >
-          {positionOptions.map((option) => (
-            <option key={option.value} value={option.value}>
+        <div className="flex gap-1">
+          {genderOptions.map((option) => (
+            <button
+              key={option.value}
+              type="button"
+              onClick={() => handleChange("gender", option.value)}
+              className={`px-3 py-2 rounded-lg text-xs font-medium transition-colors ${
+                filters.gender === option.value
+                  ? "bg-primary-600 text-white"
+                  : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+              }`}
+            >
               {option.label}
-            </option>
+            </button>
           ))}
-        </select>
+        </div>
       </div>
 
-      <div className="min-w-[160px]">
+      <div className="min-w-[140px]">
         <label className="text-[10px] font-medium text-text-secondary uppercase tracking-wider block mb-1">
           Course
         </label>

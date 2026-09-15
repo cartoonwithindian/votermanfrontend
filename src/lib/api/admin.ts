@@ -230,4 +230,28 @@ export const adminApi = {
     api.patch<{ data: AdminConstituencyRecord }>(`/admin/constituencies/${id}`, body),
   deleteConstituency: (id: number | string) =>
     api.delete(`/admin/constituencies/${id}`),
+
+  // ---- Candidate Applications ----
+  // Get approved candidates for admin position management
+  getApprovedCandidates: (params?: { position_id?: number; department?: string; section?: string }) => {
+    const queryParams = new URLSearchParams();
+    if (params?.position_id) queryParams.set('position_id', String(params.position_id));
+    if (params?.department) queryParams.set('department', params.department);
+    if (params?.section) queryParams.set('section', params.section);
+    const query = queryParams.toString();
+    return api.get<{ data: ApprovedCandidateRow[] }>(`/admin/candidates/approved${query ? '?' + query : ''}`);
+  },
 };
+
+export interface ApprovedCandidateRow {
+  id: number;
+  student_id: number;
+  full_name: string;
+  gender: string;
+  department: string;
+  year: string;
+  section: string;
+  position_id: number;
+  position_name: string;
+  status: string;
+}

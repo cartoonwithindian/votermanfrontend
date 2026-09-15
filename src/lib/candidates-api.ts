@@ -4,15 +4,23 @@
 // Maps backend rows onto the UI Candidate model used by the candidate pages.
 
 import { api } from "@/lib/api/client";
-import type { Candidate } from "@/lib/candidate-data";
+import type { Candidate, CandidateGender, CandidatePosition, CandidateDepartment, CandidateYear } from "@/lib/candidate-data";
 
 interface CandidateRow {
   id: number;
+  student_id: number;
   name: string;
-  description?: string | null;
-  position_name?: string | null;
-  club_name?: string | null;
-  image_url?: string | null;
+  gender: CandidateGender | null;
+  department: string;
+  year: string;
+  section: string | null;
+  description: string | null;
+  image_url: string | null;
+  is_active: boolean;
+  position_id: number;
+  position_name: string;
+  election_id: number;
+  election_name: string;
 }
 
 function initialsOf(name: string): string {
@@ -27,20 +35,40 @@ function toCandidate(row: CandidateRow): Candidate {
   return {
     id: String(row.id),
     name: row.name || "",
-    position: (row.position_name || "Other") as Candidate["position"],
-    department: (row.club_name || "") as Candidate["department"],
-    year: "" as Candidate["year"],
-    photoInitials: initialsOf(row.name || ""),
+    position: (row.position_name || "Other") as CandidatePosition,
+    department: (row.department || "") as CandidateDepartment,
+    year: (row.year || "") as CandidateYear,
+    gender: row.gender || "Other",
+    section: row.section || undefined,
+    photoInitials: initialsOf(row.name),
     campaignSymbol: "",
-    verified: true,
+    verified: false,
     biography: bio,
-    manifestos: bio ? [{ title: "Overview", content: bio }] : [],
+    manifestos: [],
+    profilePhotoUrl: row.image_url || undefined,
   };
 }
 
-/** GET /candidates - all active candidates (public). */
-export async function listCandidates(): Promise<Candidate[]> {
-  const rows = await api.get<CandidateRow[]>("/candidates");
+export interface ListCandidatesOptions {
+  gender?: string;
+  department?: string;
+  year?: string;
+  section?: string;
+}
+
+/** GET /candidates - all approved active candidates (public).
+ *  Supports filtering by gender, department, year, section.
+ */
+export async function listCandidates(options?: ListCandidatesOptions): Promise<Candidate[]> {
+  const queryParams = new URLSearchParams();
+
+  if (options?.gender) queryParams.set('gender', options.gender);
+  if (options?.department) queryParams.set('department', options.department);
+  if (options?.year) queryParams.set('year', options.year);
+  if (options?.section) queryParams.set('section', options.section);
+
+  const query = queryParams.toString() ? `?${queryParams.toString()}` : '';
+  const rows = await api.get<CandidateRow[]>(`/candidates${query}`);
   return (rows || []).map(toCandidate);
 }
 

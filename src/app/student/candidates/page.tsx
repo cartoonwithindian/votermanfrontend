@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useMemo, useEffect } from "react";
+import React, { useState, useMemo, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { Scale, CheckCircle2 } from "lucide-react";
 import { useRouter } from "next/navigation";
@@ -27,30 +27,46 @@ export default function CandidatePage() {
 
   const [searchQuery, setSearchQuery] = useState("");
   const [filters, setFilters] = useState({
-    position: "all",
+    gender: "all",
     department: "all",
     year: "all",
   });
-  const [sortBy, setSortBy] = useState("name-asc");
+  const [sortBy, setSortBy] = useState<"name-asc" | "name-desc">("name-asc");
 
   const [comparedIds, setComparedIds] = useState<Set<string>>(new Set());
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
-  const loadCandidates = () => {
-    listCandidates()
-      .then((data) => {
-        setCandidates(data);
-        setLoading(false);
-      })
-      .catch(() => {
-        setError("Failed to load candidates. Please try again.");
-        setLoading(false);
-      });
-  };
+  // Load candidates from API
+  const loadCandidates = useCallback(async () => {
+    setLoading(true);
+    setError("");
+    try {
+      // Map UI gender values to backend values
+      // "girls" -> "Female", "boys" -> "Male"
+      const genderMap: Record<string, string> = {
+        girls: "Female",
+        boys: "Male",
+      };
+      const backendGender = filters.gender !== "all" ? genderMap[filters.gender] || filters.gender : undefined;
 
-  useEffect(() => {
+      const data = await listCandidates({
+        gender: backendGender,
+        department: filters.department !== "all" ? filters.department : undefined,
+        year: filters.year !== "all" ? filters.year : undefined,
+      });
+      setCandidates(data);
+    } catch (err) {
+      console.error("Failed to load candidates:", err);
+      setError("Failed to load candidates. Please try again.");
+      setCandidates([]);
+    } finally {
+      setLoading(false);
+    }
+  }, [filters]);
+
+  React.useEffect(() => {
     loadCandidates();
-  }, []);
+  }, [loadCandidates]);
 
   // Event-handler retry (loading flag is set here, not inside the effect).
   const retry = () => {
@@ -89,13 +105,8 @@ export default function CandidatePage() {
         (c) =>
           c.name.toLowerCase().includes(lower) ||
           c.id.toLowerCase().includes(lower) ||
-          c.position.toLowerCase().includes(lower) ||
           c.department.toLowerCase().includes(lower)
       );
-    }
-
-    if (filters.position !== "all") {
-      results = results.filter((c) => c.position === filters.position);
     }
 
     if (filters.department !== "all") {
@@ -216,7 +227,7 @@ export default function CandidatePage() {
             <div className="flex-1 min-w-0">
               <CandidateFilters filters={filters} onFilterChange={setFilters} />
             </div>
-            <CandidateSort sortBy={sortBy} onSortChange={setSortBy} />
+            <CandidateSort sortBy={sortBy} onSortChange={(v) => setSortBy(v as "name-asc" | "name-desc")} />
             <CandidateCount count={filteredCandidates.length} />
           </div>
 
@@ -237,7 +248,7 @@ export default function CandidatePage() {
                   variant="secondary"
                   onClick={() => {
                     setSearchQuery("");
-                    setFilters({ position: "all", department: "all", year: "all" });
+                    setFilters({ gender: "all", department: "all", year: "all" });
                   }}
                 >
                   Clear Filters
