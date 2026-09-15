@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/Button";
 import { cn } from "@/lib/utils";
 import { setBindingToken } from "@/lib/session-binding";
 import { setAuthCookie } from "@/lib/mock-auth";
+import { destinationForPortal } from "@/lib/dashboard-route";
 import type { UserRole } from "@/lib/auth-types";
 
 const API_BASE = (process.env.NEXT_PUBLIC_API_URL || "/api/v1").replace(/\/$/, "");
@@ -20,30 +21,6 @@ const CLERK_ENABLED = !!process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY;
 
 type Portal = "student" | "candidate";
 type Mode = "login" | "register";
-
-/**
- * Single home for Student + Candidate auth. Sign in and registration live on
- * one page behind a role toggle; the backend's ACTUAL account role decides
- * where the user lands. CANDIDATE is only earned on approval — until then the
- * account still holds the STUDENT role — so a candidate-portal login with a
- * STUDENT role is a waiting applicant: land on /candidate/status (the waiting
- * room), never the student dashboard. A non-elevated STUDENT via the student
- * portal still lands on the student dashboard; ADMIN/CAD land on their own.
- */
-function destinationFor(portal: Portal, backendRole: string | undefined): string {
-  switch (String(backendRole || "").toUpperCase()) {
-    case "ADMIN":
-      return "/admin/dashboard";
-    case "CAD":
-      return "/cad/dashboard";
-    case "CANDIDATE":
-      return "/candidate/dashboard";
-    default:
-      // STUDENT (or unknown): via the candidate portal this is a pending,
-      // unapproved applicant — send them to the candidate waiting room.
-      return portal === "candidate" ? "/candidate/status" : "/student/dashboard";
-  }
-}
 
 function toCookieRole(backendRole: string | undefined, fallback: Portal): UserRole {
   const r = String(backendRole || "").toLowerCase();
@@ -282,7 +259,9 @@ export function UnifiedAuthPage({
       if (user) {
         setAuthCookie(toCookieRole(user?.role, portal), user.name || user.fullName || "", user.email || normalized);
       }
-      go(destinationFor(portal, user?.role));
+      // Portal-sticky routing: the page they signed in from decides the
+      // portal — the backend role never pulls them across portals.
+      go(destinationForPortal(portal, user?.role));
     } catch (err) {
       console.error("login threw:", err);
       setError("Something went wrong. Please try again.");
@@ -395,7 +374,7 @@ export function UnifiedAuthPage({
       if (user) {
         setAuthCookie(toCookieRole(user?.role, portal), user.name || user.fullName || normalized.split("@")[0], user.email || normalized);
       }
-      go(destinationFor(portal, user?.role));
+      go(destinationForPortal(portal, user?.role));
     } catch (err) {
       console.error("verifyCode threw:", err);
       setError("Something went wrong. Please try again.");

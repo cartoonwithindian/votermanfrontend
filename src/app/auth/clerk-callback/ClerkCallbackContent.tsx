@@ -9,7 +9,7 @@ import Link from "next/link";
 import { Loader2 } from "lucide-react";
 import { setBindingToken } from "@/lib/session-binding";
 import { setAuthCookie } from "@/lib/mock-auth";
-import { getDashboardRoute } from "@/lib/dashboard-route";
+import { destinationForPortal } from "@/lib/dashboard-route";
 import type { UserRole } from "@/lib/auth-types";
 
 const API_BASE = (process.env.NEXT_PUBLIC_API_URL || "/api/v1").replace(/\/$/, "");
@@ -83,10 +83,12 @@ export default function ClerkCallbackContent() {
           );
         }
 
-        // The backend account role decides the destination — never the
-        // portal the user started from. (CandidateLayout bounces unapproved
-        // applicants from the dashboard to /candidate/status.)
-        const destination = getDashboardRoute(role);
+        // Portal-sticky routing: the portal the user started from decides
+        // where they land — the backend role never pulls them across
+        // portals. (CandidateLayout bounces unapproved applicants from the
+        // dashboard to /candidate/status.)
+        const portal = requestedRole === "candidate" ? "candidate" : "student";
+        const destination = destinationForPortal(portal, account?.role);
         if (!cancelled) window.location.replace(destination);
       } catch (err) {
         if (cancelled) return;
