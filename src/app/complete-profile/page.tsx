@@ -8,11 +8,10 @@ import { AuthCard } from "@/components/auth/AuthCard";
 import { AuthHeader } from "@/components/auth/AuthHeader";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
+import { CourseSelect } from "@/components/ui/CourseSelect";
+import { BatchSelect } from "@/components/ui/BatchSelect";
 import { api, ApiError } from "@/lib/api/client";
-
-const COURSES = ["BBA", "BCA", "BCOM", "MBA", "MCA"];
-const YEARS = ["1st Year", "2nd Year", "3rd Year", "4th Year"];
-const SECTIONS = ["A", "B", "C", "D", "E", "F"];
+import type { Course, Section, Year } from "@/lib/class-data";
 
 const DASHBOARDS: Record<string, string> = {
   student: "/student/dashboard",
@@ -30,9 +29,8 @@ function CompleteProfileForm() {
       : DASHBOARDS.student;
 
   const [rollNumber, setRollNumber] = useState("");
-  const [course, setCourse] = useState("");
-  const [year, setYear] = useState("");
-  const [section, setSection] = useState("");
+  const [course, setCourse] = useState<"" | Course>("");
+  const [batch, setBatch] = useState<{ section: Section; year: Year | "" }>({ section: "", year: "" });
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
 
@@ -49,12 +47,8 @@ function CompleteProfileForm() {
       setError("Please select your course.");
       return;
     }
-    if (!year) {
-      setError("Please select your year.");
-      return;
-    }
-    if (!section) {
-      setError("Please select your section.");
+    if (!batch.year) {
+      setError("Please select your batch.");
       return;
     }
 
@@ -63,8 +57,8 @@ function CompleteProfileForm() {
       await api.post("/auth/profile", {
         rollNumber: roll,
         department: course,
-        year,
-        section,
+        year: batch.year,
+        section: batch.section,
       });
       router.replace(next);
     } catch (err) {
@@ -89,7 +83,7 @@ function CompleteProfileForm() {
           </div>
           <AuthHeader
             title="Complete Your Profile"
-            subtitle="One-time step — your roll number, course, year and section"
+            subtitle="One-time step — your roll number, course and batch"
           />
         </div>
 
@@ -115,55 +109,28 @@ function CompleteProfileForm() {
             <label htmlFor="profile-course" className="text-xs font-medium text-text-secondary">
               Course
             </label>
-            <select
+            <CourseSelect
               id="profile-course"
               value={course}
-              onChange={(e) => setCourse(e.target.value)}
-              className={selectClass}
+              onChange={(c) => {
+                setCourse(c);
+                setBatch({ section: "", year: "" });
+              }}
               required
-            >
-              <option value="">Select course</option>
-              {COURSES.map((c) => (
-                <option key={c} value={c}>{c}</option>
-              ))}
-            </select>
+            />
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-1.5">
-              <label htmlFor="profile-year" className="text-xs font-medium text-text-secondary">
-                Year
-              </label>
-              <select
-                id="profile-year"
-                value={year}
-                onChange={(e) => setYear(e.target.value)}
-                className={selectClass}
-                required
-              >
-                <option value="">Select year</option>
-                {YEARS.map((y) => (
-                  <option key={y} value={y}>{y}</option>
-                ))}
-              </select>
-            </div>
-            <div className="space-y-1.5">
-              <label htmlFor="profile-section" className="text-xs font-medium text-text-secondary">
-                Section
-              </label>
-              <select
-                id="profile-section"
-                value={section}
-                onChange={(e) => setSection(e.target.value)}
-                className={selectClass}
-                required
-              >
-                <option value="">Select section</option>
-                {SECTIONS.map((s) => (
-                  <option key={s} value={s}>{s}</option>
-                ))}
-              </select>
-            </div>
+          <div className="space-y-1.5">
+            <label htmlFor="profile-batch" className="text-xs font-medium text-text-secondary">
+              Batch
+            </label>
+            <BatchSelect
+              id="profile-batch"
+              course={course}
+              value={batch}
+              onChange={(b) => setBatch(b)}
+              required
+            />
           </div>
 
           <Button

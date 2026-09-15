@@ -21,6 +21,7 @@ import {
   X,
 } from "lucide-react"
 import { useState, useMemo, useEffect } from "react"
+import { COURSES } from "@/lib/class-data"
 
 export default function CandidateManagementPage() {
   const [candidates, setCandidates] = useState<CandidateApplicationData[]>([])
@@ -40,8 +41,8 @@ export default function CandidateManagementPage() {
 
   const [approveError, setApproveError] = useState("")
 
-  // Courses offered on the candidate application form + any department seen in real data
-  const FORM_DEPARTMENTS = ["BBA", "BCA", "BCOM", "MBA", "MCA"]
+  // Courses offered on the candidate application form + any course seen in real data
+  const formDepartments = COURSES
   const statuses = ["all", "draft", "submitted", "under_review", "changes_requested", "approved", "rejected"]
   const positions = useMemo(() => {
     const seen = Array.from(new Set(candidates.map((c) => c.position).filter(Boolean))) as string[]
@@ -49,8 +50,8 @@ export default function CandidateManagementPage() {
   }, [candidates])
   const departments = useMemo(() => {
     const seen = Array.from(new Set(candidates.map((c) => c.department).filter(Boolean))) as string[]
-    return ["all", ...Array.from(new Set([...FORM_DEPARTMENTS, ...seen]))]
-  }, [candidates])
+    return ["all", ...Array.from(new Set([...formDepartments, ...seen]))]
+  }, [candidates, formDepartments])
 
   useEffect(() => {
     getAllApplications()
@@ -190,7 +191,7 @@ export default function CandidateManagementPage() {
               >
                 {departments.map((d) => (
                   <option key={d} value={d}>
-                    {d === "all" ? "All Departments" : d}
+                    {d === "all" ? "All Courses" : d}
                   </option>
                 ))}
               </select>

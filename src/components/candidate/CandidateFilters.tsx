@@ -6,6 +6,7 @@ import {
   type CandidateDepartment,
   type CandidateYear,
 } from "@/lib/candidate-data";
+import { COURSES, ALL_YEARS } from "@/lib/class-data";
 
 interface Filters {
   position: string;
@@ -28,23 +29,13 @@ const positionOptions = [
 ];
 
 const departmentOptions = [
-  { value: "all", label: "All Departments" },
-  { value: "BCA", label: "BCA" },
-  { value: "BBA", label: "BBA" },
-  { value: "B.Tech", label: "B.Tech" },
-  { value: "B.Com", label: "B.Com" },
-  { value: "Economics", label: "Economics" },
-  { value: "Fine Arts", label: "Fine Arts" },
-  { value: "Mass Communication", label: "Mass Communication" },
-  { value: "Other", label: "Other" },
+  { value: "all", label: "All Courses" },
+  ...COURSES.map((c) => ({ value: c, label: c })),
 ];
 
 const yearOptions = [
   { value: "all", label: "All Years" },
-  { value: "1st Year", label: "1st Year" },
-  { value: "2nd Year", label: "2nd Year" },
-  { value: "3rd Year", label: "3rd Year" },
-  { value: "4th Year", label: "4th Year" },
+  ...ALL_YEARS.map((y) => ({ value: y, label: y })),
 ];
 
 export const CandidateFilters: React.FC<CandidateFiltersProps> = ({
@@ -76,7 +67,7 @@ export const CandidateFilters: React.FC<CandidateFiltersProps> = ({
 
       <div className="min-w-[160px]">
         <label className="text-[10px] font-medium text-text-secondary uppercase tracking-wider block mb-1">
-          Department
+          Course
         </label>
         <select
           value={filters.department}

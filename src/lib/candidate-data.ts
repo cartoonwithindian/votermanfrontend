@@ -3,6 +3,8 @@
 // Mock candidate data for CampusVote Module 3
 // 12 fictional candidates across multiple positions and departments
 
+import type { Course, Year } from "./class-data";
+
 export type CandidatePosition = 
   | "President" 
   | "Vice President" 
@@ -10,21 +12,9 @@ export type CandidatePosition =
   | "Treasurer" 
   | "Cultural Secretary";
 
-export type CandidateDepartment = 
-  | "BCA" 
-  | "BBA" 
-  | "B.Tech" 
-  | "B.Com" 
-  | "Economics"
-  | "Fine Arts"
-  | "Mass Communication"
-  | "Other";
+export type CandidateDepartment = Course;
 
-export type CandidateYear = 
-  | "1st Year" 
-  | "2nd Year" 
-  | "3rd Year" 
-  | "4th Year";
+export type CandidateYear = Year;
 
 export interface ManifestoSection {
   title: string;

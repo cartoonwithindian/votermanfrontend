@@ -6,6 +6,9 @@ import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import { adminApi, type AdminElectionRecord, type AdminConstituencyRecord } from "@/lib/api/admin";
+import { CourseSelect } from "@/components/ui/CourseSelect";
+import { BatchSelect } from "@/components/ui/BatchSelect";
+import { seatLabel } from "@/lib/class-data";
 import {
   Vote,
   Calendar,
@@ -22,10 +25,6 @@ import {
   Plus,
   Trash2,
 } from "lucide-react";
-
-const DEPARTMENT_OPTIONS = ["BBA", "BCA", "BCOM", "MBA", "MCA"];
-const CR_YEAR_OPTIONS = ["1st Year", "2nd Year", "3rd Year", "4th Year"];
-const CR_SECTION_OPTIONS = ["A", "B", "C", "D", "E", "F"];
 
 const STATUS_OPTIONS = ["DRAFT", "SCHEDULED", "OPEN", "CLOSED", "PUBLISHED"] as const;
 
@@ -263,8 +262,8 @@ export default function ElectionManagementPage() {
 
   const handleCreateConstituency = async () => {
     if (!selected) return;
-    if (!crForm.department || !crForm.year || !crForm.section) {
-      setCrError("Department, year and section are required.");
+    if (!crForm.department || !crForm.year) {
+      setCrError("Course and batch are required.");
       return;
     }
     setCrSaving(true);
@@ -276,7 +275,7 @@ export default function ElectionManagementPage() {
         year: crForm.year,
         section: crForm.section,
       });
-      showCrToast("success", `${crForm.department} ${crForm.year} Section ${crForm.section} added.`);
+      showCrToast("success", `${seatLabel(crForm.department, crForm.year, crForm.section)} added.`);
       setCrModalOpen(false);
       setCrForm({ department: "", year: "", section: "" });
       await loadConstituencies();
@@ -812,47 +811,28 @@ export default function ElectionManagementPage() {
                       </div>
                       <p className="text-sm text-text-secondary mb-4">
                         Creates a Class Representative seat for {selected.name}. Students in this
-                        department, year and section vote for the Class Representative.
+                        course and batch vote for the Class Representative.
                       </p>
                       <div className="grid grid-cols-1 gap-3 mb-4">
                         <div>
-                          <label className="block text-sm font-medium text-text-primary mb-1">Department</label>
-                          <select
+                          <label className="block text-sm font-medium text-text-primary mb-1">Course</label>
+                          <CourseSelect
                             value={crForm.department}
-                            onChange={(e) => setCrForm((f) => ({ ...f, department: e.target.value }))}
-                            className="w-full border border-border-strong rounded-xl px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-primary-500 cursor-pointer"
-                          >
-                            <option value="">Select department</option>
-                            {DEPARTMENT_OPTIONS.map((d) => (
-                              <option key={d} value={d}>{d}</option>
-                            ))}
-                          </select>
+                            onChange={(c) => {
+                              setCrForm((f) => ({ ...f, department: c, year: "", section: "" }));
+                            }}
+                          />
                         </div>
                         <div>
-                          <label className="block text-sm font-medium text-text-primary mb-1">Year</label>
-                          <select
-                            value={crForm.year}
-                            onChange={(e) => setCrForm((f) => ({ ...f, year: e.target.value }))}
-                            className="w-full border border-border-strong rounded-xl px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-primary-500 cursor-pointer"
-                          >
-                            <option value="">Select year</option>
-                            {CR_YEAR_OPTIONS.map((y) => (
-                              <option key={y} value={y}>{y}</option>
-                            ))}
-                          </select>
-                        </div>
-                        <div>
-                          <label className="block text-sm font-medium text-text-primary mb-1">Section</label>
-                          <select
-                            value={crForm.section}
-                            onChange={(e) => setCrForm((f) => ({ ...f, section: e.target.value }))}
-                            className="w-full border border-border-strong rounded-xl px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-primary-500 cursor-pointer"
-                          >
-                            <option value="">Select section</option>
-                            {CR_SECTION_OPTIONS.map((s) => (
-                              <option key={s} value={s}>{s}</option>
-                            ))}
-                          </select>
+                          <label className="block text-sm font-medium text-text-primary mb-1">Batch</label>
+                          <BatchSelect
+                            course={crForm.department as "MBA" | "MCA" | "BBA" | "BCom" | "BCA"}
+                            value={{ section: crForm.section as "A1" | "A2" | "A3" | "", year: crForm.year as "1st Year" | "2nd Year" | "3rd Year" | "" }}
+                            onChange={(b) => {
+                              setCrForm((f) => ({ ...f, year: b.year, section: b.section }));
+                            }}
+                            includeSectionless={false}
+                          />
                         </div>
                       </div>
                       {crError && (

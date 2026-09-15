@@ -120,11 +120,11 @@ export const MOCK_ADMIN_STUDENTS: AdminStudent[] = [
   { id: "STU-2025-001", name: "Anurag Gupta", department: "BCA", year: "2nd Year", eligibility: "Eligible", votingStatus: "Voted", accountStatus: "Active" },
   { id: "STU-2025-002", name: "Riya Sharma", department: "BCA", year: "1st Year", eligibility: "Eligible", votingStatus: "Not Voted", accountStatus: "Active" },
   { id: "STU-2025-003", name: "Karan Malhotra", department: "BBA", year: "3rd Year", eligibility: "Eligible", votingStatus: "Voted", accountStatus: "Active" },
-  { id: "STU-2025-004", name: "Pooja Verma", department: "BSc IT", year: "2nd Year", eligibility: "Eligible", votingStatus: "Not Voted", accountStatus: "Active" },
+  { id: "STU-2025-004", name: "Pooja Verma", department: "MCA", year: "2nd Year", eligibility: "Eligible", votingStatus: "Not Voted", accountStatus: "Active" },
   { id: "STU-2025-005", name: "Siddharth Rao", department: "BCA", year: "3rd Year", eligibility: "Eligible", votingStatus: "Voted", accountStatus: "Active" },
   { id: "STU-2025-006", name: "Meera Iyer", department: "BBA", year: "1st Year", eligibility: "Eligible", votingStatus: "Not Voted", accountStatus: "Active" },
   { id: "STU-2025-007", name: "Rahul Das", department: "BCA", year: "2nd Year", eligibility: "Not Eligible", votingStatus: "Not Voted", accountStatus: "Suspended" },
-  { id: "STU-2025-008", name: "Sakshi Kulkarni", department: "BSc IT", year: "3rd Year", eligibility: "Eligible", votingStatus: "Voted", accountStatus: "Active" },
+  { id: "STU-2025-008", name: "Sakshi Kulkarni", department: "MBA", year: "3rd Year", eligibility: "Eligible", votingStatus: "Voted", accountStatus: "Active" },
   { id: "STU-2025-009", name: "Varun Chopra", department: "BBA", year: "2nd Year", eligibility: "Pending Verification", votingStatus: "Not Voted", accountStatus: "Pending" },
   { id: "STU-2025-010", name: "Tanvi Bhat", department: "BCA", year: "1st Year", eligibility: "Eligible", votingStatus: "Not Voted", accountStatus: "Active" },
 ];

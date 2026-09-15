@@ -12,15 +12,14 @@ import {
   getMyApplication,
 } from "@/lib/candidate-api";
 import { getRollNumber } from "@/lib/roll-number";
+import { seatLabel, normalizeCourse } from "@/lib/class-data";
 
-const DEPARTMENT_OPTIONS = ["BBA", "BCA", "BCOM", "MBA", "MCA"];
+import { CourseSelect } from "@/components/ui/CourseSelect";
+import { BatchSelect } from "@/components/ui/BatchSelect";
+import type { Course, Section, Year } from "@/lib/class-data";
 
 const DECLARATION_TEXT =
   "I hereby declare that all the information given above is true and I agree that my candidature will stand disqualified if any of the above information is found to be false or misrepresented. I also agree to abide by the Guidelines of Bosco Technical Training Society Affiliated to Guru Gobind Singh Indraprastha University.";
-
-const YEAR_OPTIONS = ["1st Year", "2nd Year", "3rd Year", "4th Year"];
-
-const SECTION_OPTIONS = ["A", "B", "C", "D", "E", "F"];
 import {
   User,
   GraduationCap,
@@ -107,7 +106,7 @@ export default function CandidateApplyPage() {
         const storedRoll =
           me.user.rollNumber ||
           getRollNumber("candidate", accountEmail) || getRollNumber("student", accountEmail);
-        const profileDept = me.user.department || "";
+        const profileDept = normalizeCourse(me.user.department || "");
         const profileYear = me.user.year || "";
         const profileSection = me.user.section || "";
 
@@ -160,6 +159,40 @@ export default function CandidateApplyPage() {
       setErrors((prev) => {
         const next = { ...prev };
         delete next[field];
+        return next;
+      });
+    }
+  };
+
+  const handleCourseChange = (c: Course | "") => {
+    setFormData((prev) => ({
+      ...prev,
+      department: c,
+      year: "",
+      section: "",
+    }));
+    if (errors.department) {
+      setErrors((prev) => {
+        const next = { ...prev };
+        delete next.department;
+        delete next.year;
+        delete next.section;
+        return next;
+      });
+    }
+  };
+
+  const handleBatchChange = (batch: { section: Section; year: Year }) => {
+    setFormData((prev) => ({
+      ...prev,
+      year: batch.year,
+      section: batch.section,
+    }));
+    if (errors.year || errors.section) {
+      setErrors((prev) => {
+        const next = { ...prev };
+        delete next.year;
+        delete next.section;
         return next;
       });
     }
@@ -221,9 +254,9 @@ export default function CandidateApplyPage() {
     const newErrors: FormErrors = {};
     if (!formData.name.trim()) newErrors.name = "Full name is required";
     if (!formData.enrollmentNumber.trim()) newErrors.enrollmentNumber = "Enrollment number is required";
-    if (!formData.department) newErrors.department = "Department is required";
-    if (!formData.year) newErrors.year = "Year is required";
-    if (!formData.section) newErrors.section = "Section is required";
+    if (!formData.department) newErrors.department = "Course is required";
+    if (!formData.year) newErrors.year = "Batch is required";
+    if (!formData.section) newErrors.section = "Batch is required";
     if (!formData.age.trim()) newErrors.age = "Age is required";
     if (!formData.dateOfBirth.trim()) newErrors.dateOfBirth = "Date of birth is required";
     if (!formData.gender) newErrors.gender = "Gender is required";
@@ -381,7 +414,7 @@ export default function CandidateApplyPage() {
                   </div>
                   <div className="flex justify-between text-sm">
                     <span className="text-text-secondary">Constituency</span>
-                    <span className="font-medium text-text-primary">{formData.department} {formData.year} Section {formData.section}</span>
+                    <span className="font-medium text-text-primary">{seatLabel(formData.department, formData.year, formData.section)}</span>
                   </div>
                   <div className="flex justify-between text-sm">
                     <span className="text-text-secondary">Status</span>
@@ -475,7 +508,7 @@ export default function CandidateApplyPage() {
               <div className="bg-info-50 border border-info-100 rounded-xl p-4 text-sm text-info-700">
               <p className="font-medium">Important</p>
               <p className="mt-1 text-xs text-info-600">
-                Verified information (name, enrollment number, age, DOB, gender, Aadhar, department, year, section, club and position) will be
+                Verified information (name, enrollment number, age, DOB, gender, Aadhar, course, batch, club and position) will be
                 frozen after approval and cannot be changed.
               </p>
             </div>
@@ -526,20 +559,13 @@ export default function CandidateApplyPage() {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs font-medium text-text-secondary mb-1.5">
-                    Course / Department <span className="text-error-500">*</span>
+                    Course <span className="text-error-500">*</span>
                   </label>
-                  <select
+                  <CourseSelect
                     value={formData.department}
-                    onChange={(e) => handleChange("department", e.target.value)}
-                    className={`w-full px-4 py-2.5 rounded-xl border text-sm text-text-primary focus:outline-none focus:ring-2 focus:ring-primary-500 ${
-                      errors.department ? "border-error-500" : "border-border"
-                    }`}
-                  >
-                    <option value="">Select department</option>
-                    {DEPARTMENT_OPTIONS.map((d) => (
-                      <option key={d} value={d}>{d}</option>
-                    ))}
-                  </select>
+                    onChange={handleCourseChange}
+                    error={!!errors.department}
+                  />
                   {errors.department && (
                     <p className="text-xs text-error-600 mt-1">{errors.department}</p>
                   )}
@@ -547,45 +573,16 @@ export default function CandidateApplyPage() {
 
                 <div>
                   <label className="block text-xs font-medium text-text-secondary mb-1.5">
-                    Year / Semester <span className="text-error-500">*</span>
+                    Batch <span className="text-error-500">*</span>
                   </label>
-                  <select
-                    value={formData.year}
-                    onChange={(e) => handleChange("year", e.target.value)}
-                    className={`w-full px-4 py-2.5 rounded-xl border text-sm text-text-primary focus:outline-none focus:ring-2 focus:ring-primary-500 ${
-                      errors.year ? "border-error-500" : "border-border"
-                    }`}
-                  >
-                    <option value="">Select year</option>
-                    {YEAR_OPTIONS.map((y) => (
-                      <option key={y} value={y}>{y}</option>
-                    ))}
-                  </select>
-                  {errors.year && (
-                    <p className="text-xs text-error-600 mt-1">{errors.year}</p>
-                  )}
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-medium text-text-secondary mb-1.5">
-                    Section <span className="text-error-500">*</span>
-                  </label>
-                  <select
-                    value={formData.section}
-                    onChange={(e) => handleChange("section", e.target.value)}
-                    className={`w-full px-4 py-2.5 rounded-xl border text-sm text-text-primary focus:outline-none focus:ring-2 focus:ring-primary-500 ${
-                      errors.section ? "border-error-500" : "border-border"
-                    }`}
-                  >
-                    <option value="">Select section</option>
-                    {SECTION_OPTIONS.map((s) => (
-                      <option key={s} value={s}>{s}</option>
-                    ))}
-                  </select>
-                  {errors.section && (
-                    <p className="text-xs text-error-600 mt-1">{errors.section}</p>
+                  <BatchSelect
+                    course={formData.department as Course}
+                    value={{ section: formData.section as Section, year: formData.year as Year }}
+                    onChange={handleBatchChange}
+                    error={!!errors.year || !!errors.section}
+                  />
+                  {(errors.year || errors.section) && (
+                    <p className="text-xs text-error-600 mt-1">{errors.year || errors.section}</p>
                   )}
                 </div>
               </div>
@@ -613,7 +610,7 @@ export default function CandidateApplyPage() {
                 </p>
                 <p className="text-xs text-info-700 font-medium mt-2 mb-1">Constituency</p>
                 <p className="text-sm text-text-primary font-semibold">
-                  {formData.department ? formData.department : "—"} {formData.year ? formData.year : "—"} Section {formData.section ? formData.section : "—"}
+                  {seatLabel(formData.department, formData.year, formData.section)}
                 </p>
                 <p className="text-xs text-info-700 mt-2 leading-relaxed">
                   Administration will seat you on the Class Representative ballot

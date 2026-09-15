@@ -5,6 +5,8 @@ import Link from "next/link";
 import { Loader2, UserPlus, CheckCircle2 } from "lucide-react";
 import { AuthLayout } from "@/components/auth/AuthLayout";
 import { AuthCard } from "@/components/auth/AuthCard";
+import { CourseSelect } from "@/components/ui/CourseSelect";
+import { BatchSelect } from "@/components/ui/BatchSelect";
 
 const API_BASE = (process.env.NEXT_PUBLIC_API_URL || "").replace(/\/$/, "");
 
@@ -139,12 +141,26 @@ export default function AccessRequestPage() {
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
-              <label className={labelCls}>Course / Department</label>
-              <input type="text" value={form.department} onChange={set("department")} maxLength={120} className={inputCls} placeholder="e.g. BCA" />
+              <label className={labelCls}>Course</label>
+              <CourseSelect
+                id="access-course"
+                value={form.department}
+                onChange={(c) =>
+                  setForm((f) => ({ ...f, department: c, yearOrSemester: "" }))
+                }
+              />
             </div>
             <div>
-              <label className={labelCls}>Year / Semester</label>
-              <input type="text" value={form.yearOrSemester} onChange={set("yearOrSemester")} maxLength={40} className={inputCls} placeholder="e.g. TY / Sem 5" />
+              <label className={labelCls}>Batch</label>
+              <BatchSelect
+                id="access-batch"
+                course={form.department as "MBA" | "MCA" | "BBA" | "BCom" | "BCA"}
+                value={{
+                  section: "" as "A1" | "A2" | "A3" | "",
+                  year: form.yearOrSemester as "1st Year" | "2nd Year" | "3rd Year" | "",
+                }}
+                onChange={(b) => setForm((f) => ({ ...f, yearOrSemester: b.year }))}
+              />
             </div>
           </div>
 

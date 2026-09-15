@@ -8,13 +8,13 @@ import { Badge } from "@/components/ui/Badge";
 import { Modal } from "@/components/ui/Modal";
 import { AdminLayout } from "@/components/admin-dashboard/AdminLayout";
 import { adminApi, type AdminStudentRecord } from "@/lib/api/admin";
+import { COURSES, seatLabel, normalizeCourse } from "@/lib/class-data";
+import { CourseSelect } from "@/components/ui/CourseSelect";
+import { BatchSelect } from "@/components/ui/BatchSelect";
+import type { Section, Year } from "@/lib/class-data";
 
-const DEPARTMENTS = ["All", "BCA", "BBA", "BCOM", "MCA", "MBA"] as const;
+const DEPARTMENTS = ["All", ...COURSES] as const;
 const ROLES = ["All", "STUDENT", "CANDIDATE", "CAD", "ADMIN"] as const;
-
-const SECTION_OPTIONS = ["A", "B", "C", "D", "E", "F"] as const;
-const YEAR_OPTIONS = ["1st Year", "2nd Year", "3rd Year", "4th Year"] as const;
-const DEPARTMENT_OPTIONS = ["BBA", "BCA", "BCOM", "MBA", "MCA"] as const;
 
 type UiStudent = AdminStudentRecord & {
   displayId: string;
@@ -418,56 +418,56 @@ export default function StudentsPage() {
                 </div>
 
                 <div className="flex items-center justify-between py-2 border-b border-border">
-                  <span className="text-sm text-text-secondary">Department</span>
-                  <select
-                    value={(selectedStudent.department ?? selectedStudent.applied_department) || ""}
-                    disabled={saving}
-                    onChange={(e) => patchStudent(selectedStudent.id, { department: e.target.value })}
-                    className="px-2.5 py-1.5 text-sm bg-white border border-border rounded-lg text-text-primary focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all cursor-pointer disabled:opacity-50"
-                  >
-                    <option value="">—</option>
-                    {DEPARTMENT_OPTIONS.map((d) => (
-                      <option key={d} value={d}>
-                        {d}
-                      </option>
-                    ))}
-                  </select>
+                  <span className="text-sm text-text-secondary">Course</span>
+                  <div className="w-44">
+                    <CourseSelect
+                      id="student-course"
+                      value={normalizeCourse(selectedStudent.department ?? selectedStudent.applied_department)}
+                      disabled={saving}
+                      showDefault={false}
+                      onChange={(c) => {
+                        if (!c) return;
+                        patchStudent(selectedStudent.id, { department: c });
+                        setSelectedStudent((prev) =>
+                          prev
+                            ? {
+                                ...prev,
+                                department: c,
+                                year_or_semester: "",
+                                section: "",
+                              }
+                            : prev
+                        );
+                      }}
+                    />
+                  </div>
                 </div>
 
                 <div className="flex items-center justify-between py-2 border-b border-border">
-                  <span className="text-sm text-text-secondary">Year</span>
-                  <select
-                    value={(selectedStudent.year_or_semester ?? selectedStudent.applied_year) || ""}
-                    disabled={saving}
-                    onChange={(e) => patchStudent(selectedStudent.id, { year_or_semester: e.target.value })}
-                    className="px-2.5 py-1.5 text-sm bg-white border border-border rounded-lg text-text-primary focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all cursor-pointer disabled:opacity-50"
-                  >
-                    <option value="">—</option>
-                    {YEAR_OPTIONS.map((y) => (
-                      <option key={y} value={y}>
-                        {y}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div className="flex items-center justify-between py-2 border-b border-border">
-                  <span className="text-sm text-text-secondary">Section</span>
-                  <select
-                    value={(selectedStudent.section ?? selectedStudent.applied_section) || ""}
-                    disabled={saving}
-                    onChange={(e) =>
-                      patchStudent(selectedStudent.id, { section: e.target.value ? e.target.value : null })
-                    }
-                    className="px-2.5 py-1.5 text-sm bg-white border border-border rounded-lg text-text-primary focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all cursor-pointer disabled:opacity-50"
-                  >
-                    <option value="">—</option>
-                    {SECTION_OPTIONS.map((s) => (
-                      <option key={s} value={s}>
-                        {s}
-                      </option>
-                    ))}
-                  </select>
+                  <span className="text-sm text-text-secondary">Batch</span>
+                  <div className="w-44">
+                    <BatchSelect
+                      id="student-batch"
+                      course={normalizeCourse(selectedStudent.department ?? selectedStudent.applied_department)}
+                      value={{
+                        section: (selectedStudent.section ?? selectedStudent.applied_section ?? "") as Section,
+                        year: (selectedStudent.year_or_semester ?? selectedStudent.applied_year ?? "") as Year,
+                      }}
+                      disabled={saving}
+                      showDefault={false}
+                      onChange={(b) => {
+                        patchStudent(selectedStudent.id, {
+                          year_or_semester: b.year,
+                          section: b.section || null,
+                        });
+                        setSelectedStudent((prev) =>
+                          prev
+                            ? { ...prev, year_or_semester: b.year, section: b.section || null }
+                            : prev
+                        );
+                      }}
+                    />
+                  </div>
                 </div>
 
                 {(selectedStudent.applied_section || selectedStudent.applied_department || selectedStudent.applied_year) && (
@@ -476,9 +476,7 @@ export default function StudentsPage() {
                     <p className="text-xs text-text-secondary leading-relaxed">
                       This student&apos;s Class Representative application registered{" "}
                       <span className="font-medium text-text-primary">
-                        {[selectedStudent.applied_department, selectedStudent.applied_year, selectedStudent.applied_section]
-                          .filter(Boolean)
-                          .join(" ")}
+                        {seatLabel(selectedStudent.applied_department || "", selectedStudent.applied_year || "", selectedStudent.applied_section)}
                       </span>
                       . Empty fields above will use it to resolve their CR seat.
                     </p>

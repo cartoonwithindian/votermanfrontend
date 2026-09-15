@@ -2,6 +2,7 @@ import type { ApplicationStatus } from "./candidate-dashboard-data";
 import { candidateApi } from "./api/candidates";
 import type { Candidate } from "./candidate-data";
 import type { VotingPosition, VotingCandidate } from "./election-voting-data";
+import { COURSES, ALL_YEARS, seatLabel } from "./class-data";
 
 export interface CandidateApplicationData {
   id: string;
@@ -35,11 +36,11 @@ export const POSITION_OPTIONS = [
   "Sports Secretary",
 ];
 
-export const DEPARTMENT_OPTIONS = ["BCA", "BBA", "BSc IT", "BSc CS", "B.Com", "BA"];
+export const DEPARTMENT_OPTIONS = COURSES;
 
-export const YEAR_OPTIONS = ["1st Year", "2nd Year", "3rd Year", "4th Year"];
+export const YEAR_OPTIONS = ALL_YEARS;
 
-export const SECTION_OPTIONS = ["A", "B", "C", "D", "E", "F"];
+export const SECTION_OPTIONS = ["A1", "A2", "A3"];
 
 export async function getApplicationByEmail(email: string): Promise<CandidateApplicationData | undefined> {
   try {
@@ -66,9 +67,7 @@ export async function getAllApplications(): Promise<CandidateApplicationData[]> 
     const apps: any[] = res?.candidates || res?.data || [];
     return (apps || []).map((a: any) => {
       const isCR = a.category !== "CLUB";
-      const seatParts = [a.department, a.year, a.section ? `Section ${a.section}` : ""].filter(
-        (p) => p && p !== "—"
-      );
+      const seatLine = seatLabel(a.department, a.year, a.section);
       return {
       id: String(a.id),
       name: a.fullName || a.name || "—",
@@ -77,7 +76,7 @@ export async function getAllApplications(): Promise<CandidateApplicationData[]> 
       year: a.year || "—",
       section: a.section || "",
       position: isCR
-        ? seatParts.join(" ") || "Class Representative"
+        ? seatLine || "Class Representative"
         : a.position || a.contestingPosition || "—",
       email: a.email || "—",
       phone: a.phone || "—",
@@ -198,9 +197,7 @@ export async function updateApplicationStatus(
   }
   const app: any = result?.application || result?.data || result;
   const isCR = app?.category !== "CLUB";
-  const seatParts = [app?.department, app?.year, app?.section ? `Section ${app.section}` : ""].filter(
-    (p) => p && p !== "—"
-  );
+  const seatLine = seatLabel(app?.department, app?.year, app?.section);
   return {
     id: String(app?.id ?? id),
     name: app?.fullName || "—",
@@ -209,7 +206,7 @@ export async function updateApplicationStatus(
     year: app?.year || "—",
     section: app?.section || "",
     position: isCR
-      ? seatParts.join(" ") || "Class Representative"
+      ? seatLine || "Class Representative"
       : app?.position || app?.contestingPosition || "—",
     email: app?.email || "—",
     phone: app?.phone || "—",
