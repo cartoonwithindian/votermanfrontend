@@ -1,7 +1,6 @@
-"use client";
+import { redirect } from "next/navigation";
 
-import { RoleLoginPage } from "../role-login";
-
+// Consolidated into the unified auth page.
 export default function Page() {
-  return <RoleLoginPage portal="student" />;
+  redirect("/login?role=student");
 }

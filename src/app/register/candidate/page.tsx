@@ -1,7 +1,6 @@
-"use client";
+import { redirect } from "next/navigation";
 
-import { RoleRegisterPage } from "../role-register";
-
+// Consolidated into the unified auth page (Register tab).
 export default function Page() {
-  return <RoleRegisterPage portal="candidate" />;
+  redirect("/login?tab=register&role=candidate");
 }

@@ -81,10 +81,18 @@ export const CandidateLayout: React.FC<CandidateLayoutProps> = ({
       if (!alive) return;
       setStatus(currentStatus);
 
-      // Role guard: only CANDIDATE and ADMIN may access the candidate portal
-      if (userRole && userRole !== "CANDIDATE" && userRole !== "ADMIN") {
-        router.replace(getDashboardRoute(userRole));
-        return;
+      // Role guard: CANDIDATE and ADMIN may access the whole candidate portal.
+      // A STUDENT coming through the candidate toggle is a pending applicant
+      // (CANDIDATE is earned on approval) — let them wait on the apply/status
+      // pages instead of bouncing them to the student dashboard.
+      const normalizedRole = String(userRole || "").toUpperCase();
+      const isWaitingRoom =
+        pathname.startsWith("/candidate/apply") || pathname.startsWith("/candidate/status");
+      if (normalizedRole && normalizedRole !== "CANDIDATE" && normalizedRole !== "ADMIN") {
+        if (!(normalizedRole === "STUDENT" && isWaitingRoom)) {
+          router.replace(getDashboardRoute(userRole));
+          return;
+        }
       }
 
       if (!canAccessRoute(pathname, currentStatus)) {

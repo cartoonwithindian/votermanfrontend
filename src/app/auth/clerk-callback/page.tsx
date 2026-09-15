@@ -74,7 +74,7 @@ export default function ClerkCallbackPage() {
         }
 
         const destination = requestedRole === "candidate" && role === "student"
-          ? "/candidate/apply"
+          ? "/candidate/status"
           : getDashboardRoute(role);
         if (!cancelled) window.location.replace(destination);
       } catch (err) {
