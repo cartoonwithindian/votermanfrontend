@@ -7,6 +7,7 @@ import { Avatar } from "../ui/Avatar";
 import { Dropdown } from "../ui/Dropdown";
 import NotificationBell from "../ui/notification-bell";
 import { useSignOut } from "@/hooks/useSignOut";
+import { useUser } from "@clerk/nextjs";
 
 export interface NavbarProps {
   onToggleMenu: () => void;
@@ -16,6 +17,7 @@ export interface NavbarProps {
 export const Navbar: React.FC<NavbarProps> = ({ onToggleMenu, studentName }) => {
   const router = useRouter();
   const signOut = useSignOut();
+  const { user } = useUser();
   const dropdownItems = [
     {
       label: "My Profile",
@@ -75,7 +77,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onToggleMenu, studentName }) => 
         <Dropdown
           trigger={
             <button className="flex items-center gap-2.5 p-1 rounded-xl hover:bg-primary-50 transition-colors focus-ring cursor-pointer">
-              <Avatar name={studentName} size="sm" />
+              <Avatar name={studentName} size="sm" src={user?.imageUrl} />
               <div className="hidden sm:flex flex-col items-start">
                 <span className="text-xs font-semibold text-text-primary leading-none">{studentName}</span>
                 <span className="text-[10px] text-text-muted font-semibold leading-none mt-0.5">Student</span>

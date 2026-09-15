@@ -6,6 +6,7 @@ import { ChevronDown, LogOut, Menu, Settings, User, Eye } from "lucide-react";
 import { Avatar } from "@/components/ui/Avatar";
 import NotificationBell from "@/components/ui/notification-bell";
 import { useSignOut } from "@/hooks/useSignOut";
+import { useUser } from "@clerk/nextjs";
 
 export interface CandidateNavbarProps {
   onToggleMenu: () => void;
@@ -19,6 +20,7 @@ export const CandidateNavbar: React.FC<CandidateNavbarProps> = ({
   candidateId,
 }) => {
   const signOut = useSignOut();
+  const { user } = useUser();
   const [dropdownOpen, setDropdownOpen] = useState(false);
 
   return (
@@ -55,7 +57,7 @@ export const CandidateNavbar: React.FC<CandidateNavbarProps> = ({
             onClick={() => setDropdownOpen((p) => !p)}
             className="flex items-center gap-2.5 p-1 rounded-xl hover:bg-primary-50 transition-colors focus-ring cursor-pointer"
           >
-            <Avatar name={candidateName} size="sm" />
+            <Avatar name={candidateName} size="sm" src={user?.imageUrl} />
             <div className="hidden sm:flex flex-col items-start">
               <span className="text-xs font-semibold text-text-primary leading-none">
                 {candidateName}
