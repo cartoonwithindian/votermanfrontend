@@ -8,7 +8,6 @@ import { CANDIDATE_STATUS_MAP } from "@/lib/admin-dashboard-data"
 import {
   updateApplicationStatus,
   getAllApplications,
-  assignApplicationToBallot,
   type CandidateApplicationData,
 } from "@/lib/candidate-application-store"
 import {
@@ -19,7 +18,6 @@ import {
   AlertCircle,
   ArrowLeft,
   ChevronDown,
-  Vote,
   X,
 } from "lucide-react"
 import { useState, useMemo, useEffect } from "react"
@@ -42,7 +40,6 @@ export default function CandidateManagementPage() {
   const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null)
 
   const [approveError, setApproveError] = useState("")
-  const [assignBusy, setAssignBusy] = useState(false)
 
   // Courses offered on the candidate application form + any course seen in real data
   const formDepartments = COURSES
@@ -127,21 +124,6 @@ export default function CandidateManagementPage() {
     showToast(`${selectedCandidate.name} has been rejected.`, "error");
     closeReview();
     getAllApplications().then(setCandidates).catch(() => {});
-  };
-
-  const handleAssignBallot = async () => {
-    if (!selectedCandidate) return;
-    setAssignBusy(true);
-    try {
-      await assignApplicationToBallot(selectedCandidate.id);
-      showToast(`${selectedCandidate.name} placed on the ballot.`);
-      closeReview();
-      getAllApplications().then(setCandidates).catch(() => {});
-    } catch (err: any) {
-      showToast(err?.message || "Failed to place on ballot.", "error");
-    } finally {
-      setAssignBusy(false);
-    }
   };
 
   return (
@@ -335,6 +317,16 @@ export default function CandidateManagementPage() {
               </div>
 
               <div className="p-6 space-y-6">
+                {selectedCandidate.photo ? (
+                  <div className="space-y-3">
+                    <h3 className="text-sm font-semibold text-text-secondary uppercase tracking-wide">Profile Photo</h3>
+                    <img
+                      src={selectedCandidate.photo}
+                      alt={selectedCandidate.name}
+                      className="w-32 h-32 rounded-2xl object-cover border border-border"
+                    />
+                  </div>
+                ) : null}
                 <div className="space-y-3">
                   <h3 className="text-sm font-semibold text-text-secondary uppercase tracking-wide">Verified Information</h3>
                   <div className="grid grid-cols-2 gap-3">
@@ -457,18 +449,6 @@ export default function CandidateManagementPage() {
 
                 <div className="border-t border-border pt-6 space-y-3">
                   <div className="flex flex-wrap gap-3">
-                    {selectedCandidate.status === "approved" &&
-                      selectedCandidate.category === "CR" &&
-                      !selectedCandidate.electionId && (
-                        <Button
-                          onClick={handleAssignBallot}
-                          disabled={assignBusy}
-                          className="bg-primary-600 hover:bg-primary-700 text-white"
-                        >
-                          <Vote className="h-4 w-4 mr-2" />
-                          {assignBusy ? "Placing…" : "Place on ballot"}
-                        </Button>
-                      )}
                     <Button
                       onClick={() => setShowApproveModal(true)}
                       className="bg-success-600 hover:bg-success-600 text-white"
