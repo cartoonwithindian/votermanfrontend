@@ -19,6 +19,13 @@ export function RequireProfile({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     let cancelled = false;
     (async () => {
+      // The dedicated login pages live inside the portal layouts but must
+      // never trigger the profile gate (their visitors are signed out or
+      // mid-registration).
+      if (pathname === "/student/login" || pathname === "/candidate/login") {
+        if (!cancelled) setReady(true);
+        return;
+      }
       try {
         const me = await getMe();
         if (cancelled) return;

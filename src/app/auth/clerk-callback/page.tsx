@@ -73,9 +73,10 @@ export default function ClerkCallbackPage() {
           setAuthCookie(role, account.name || user?.fullName || "", account.email || user?.primaryEmailAddress?.emailAddress || "");
         }
 
-        const destination = requestedRole === "candidate" && role === "student"
-          ? "/candidate/status"
-          : getDashboardRoute(role);
+        // The backend account role decides the destination — never the
+        // portal the user started from. (CandidateLayout bounces unapproved
+        // applicants from the dashboard to /candidate/status.)
+        const destination = getDashboardRoute(role);
         if (!cancelled) window.location.replace(destination);
       } catch (err) {
         if (!cancelled) setError(err instanceof Error ? err.message : "Unable to complete sign in.");

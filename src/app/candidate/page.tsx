@@ -7,8 +7,8 @@ import { Loader2 } from "lucide-react";
 
 /**
  * Bare /candidate — no page exists here by design. Visitors either wanted
- * the candidate portal (→ /login with the candidate role preselected) or
- * the candidate area (→ /candidate/dashboard when already signed in).
+ * the candidate portal (→ /candidate/login) or the candidate area
+ * (→ /candidate/dashboard when already signed in).
  * Never renders a 404.
  */
 export default function CandidateIndexPage() {
@@ -24,7 +24,7 @@ export default function CandidateIndexPage() {
           const justSignedOut = sessionStorage.getItem("campusvote_signed_out");
           if (justSignedOut) {
             sessionStorage.removeItem("campusvote_signed_out");
-            if (!cancelled) router.replace("/login?role=candidate");
+            if (!cancelled) router.replace("/candidate/login");
             return;
           }
         } catch { /* private mode */ }
@@ -47,9 +47,9 @@ export default function CandidateIndexPage() {
             return;
           }
         }
-        router.replace("/login?role=candidate");
+        router.replace("/candidate/login");
       } catch {
-        if (!cancelled) router.replace("/login?role=candidate");
+        if (!cancelled) router.replace("/candidate/login");
       } finally {
         if (!cancelled) setChecked(true);
       }

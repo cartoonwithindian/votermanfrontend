@@ -9,8 +9,13 @@ const IS_STUDENT_PORTAL_CLOSED =
 function appProxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  // Student portal block
-  if (IS_STUDENT_PORTAL_CLOSED && pathname.startsWith("/student")) {
+  // Student portal block (the login page itself always stays reachable —
+  // signed-out visitors need it, and post-login routing handles the rest).
+  if (
+    IS_STUDENT_PORTAL_CLOSED &&
+    pathname.startsWith("/student") &&
+    !pathname.startsWith("/student/login")
+  ) {
     const url = request.nextUrl.clone();
     url.pathname = "/portal-closed";
     url.search = "";
@@ -21,6 +26,8 @@ function appProxy(request: NextRequest) {
   const PUBLIC_PREFIXES = [
     "/",
     "/login",
+    "/student/login",
+    "/candidate/login",
     "/register",
     "/admin",
     "/auth",
@@ -44,11 +51,17 @@ function appProxy(request: NextRequest) {
 
   // For protected routes, check for the campusvote_auth cookie.
   // This is a soft check — the backend enforces real auth via cv_sid.
-  // If no auth cookie exists, redirect to login.
+  // Signed-out visitors are sent to their portal's login page.
   const authCookie = request.cookies.get("campusvote_auth");
   if (!authCookie) {
     const url = request.nextUrl.clone();
-    url.pathname = "/login/any";
+    if (pathname.startsWith("/candidate")) {
+      url.pathname = "/candidate/login";
+    } else if (pathname.startsWith("/student")) {
+      url.pathname = "/student/login";
+    } else {
+      url.pathname = "/login/any";
+    }
     url.searchParams.set("redirect_url", pathname);
     return NextResponse.redirect(url);
   }

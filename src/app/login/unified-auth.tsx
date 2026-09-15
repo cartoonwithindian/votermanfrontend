@@ -24,11 +24,13 @@ type Mode = "login" | "register";
 /**
  * Single home for Student + Candidate auth. Sign in and registration live on
  * one page behind a role toggle; the backend's ACTUAL account role decides
- * where the user lands — with one rule: a candidate-portal user whose role
- * is still STUDENT (awaiting approval) waits in the candidate area, and is
- * never dropped into the student dashboard.
+ * where the user lands — the picked portal/tab never does. STUDENT (and any
+ * other non-elevated role) always lands on the student dashboard; CANDIDATE
+ * lands on the candidate dashboard (its layout bounces unapproved applicants
+ * to /candidate/status).
  */
-function destinationFor(portal: Portal, backendRole: string | undefined): string {
+function destinationFor(_portal: Portal, backendRole: string | undefined): string {
+  void _portal;
   switch (String(backendRole || "").toUpperCase()) {
     case "ADMIN":
       return "/admin/dashboard";
@@ -37,7 +39,7 @@ function destinationFor(portal: Portal, backendRole: string | undefined): string
     case "CANDIDATE":
       return "/candidate/dashboard";
     default:
-      return portal === "candidate" ? "/candidate/status" : "/student/dashboard";
+      return "/student/dashboard";
   }
 }
 
@@ -100,8 +102,20 @@ function GoogleSignInButton({ role }: { role: Portal }) {
   );
 }
 
-export function UnifiedAuthPage() {
-  const [portal, setPortal] = useState<Portal>("student");
+export function UnifiedAuthPage({
+  initialPortal = "student",
+  lockPortal = false,
+}: {
+  /** Which portal tab is selected first. Defaults to "student". */
+  initialPortal?: Portal;
+  /**
+   * When true the Student/Candidate toggle is hidden and the portal stays
+   * fixed — used by the dedicated /student/login and /candidate/login pages.
+   * The backend account role still decides the final dashboard.
+   */
+  lockPortal?: boolean;
+} = {}) {
+  const [portal, setPortal] = useState<Portal>(initialPortal);
   const [mode, setMode] = useState<Mode>("login");
 
   // Sign-in state
@@ -123,18 +137,23 @@ export function UnifiedAuthPage() {
 
   // Deep links: /login?role=candidate, /login?tab=register&role=student
   // (old /register/* pages redirect here). Also picks up the pending email
-  // left by a failed sign-in that needs registration.
+  // left by a failed sign-in that needs registration. Locked portal pages
+  // (/student/login, /candidate/login) ignore role hints and stay fixed.
   useEffect(() => {
     try {
       const params = new URLSearchParams(window.location.search);
-      const r = params.get("role")?.toLowerCase();
-      if (r === "candidate" || r === "student") setPortal(r);
+      if (!lockPortal) {
+        const r = params.get("role")?.toLowerCase();
+        if (r === "candidate" || r === "student") setPortal(r);
+      }
       const t = params.get("tab")?.toLowerCase();
       if (t === "register" || t === "login") setMode(t);
       const pending = sessionStorage.getItem("campusvote_pending_email");
       if (pending) {
-        const pendingRole = sessionStorage.getItem("campusvote_pending_role");
-        if (pendingRole === "candidate" || pendingRole === "student") setPortal(pendingRole);
+        if (!lockPortal) {
+          const pendingRole = sessionStorage.getItem("campusvote_pending_role");
+          if (pendingRole === "candidate" || pendingRole === "student") setPortal(pendingRole);
+        }
         setRegEmail(pending);
         setMode("register");
         setNotice("Complete your registration to finish signing in.");
@@ -149,9 +168,10 @@ export function UnifiedAuthPage() {
     } catch {
       // Non-fatal.
     }
-  }, []);
+  }, [lockPortal]);
 
   const switchPortal = (p: Portal) => {
+    if (lockPortal) return;
     setPortal(p);
     setError("");
     setNotice("");
@@ -411,7 +431,22 @@ export function UnifiedAuthPage() {
           />
         </div>
 
-        {/* Role toggle — Student / Candidate only */}
+        {/* Role toggle — Student / Candidate only. Hidden on the dedicated
+            /student/login and /candidate/login pages, which show a fixed badge. */}
+        {lockPortal ? (
+          <div className="flex items-center justify-center gap-2 px-3 py-2.5 rounded-2xl bg-bg-tertiary border border-border mb-4 text-sm font-semibold text-primary-700">
+            {(() => {
+              const r = roleOptions.find((o) => o.id === portal) ?? roleOptions[0];
+              const Icon = r.icon;
+              return (
+                <>
+                  <Icon className="w-4 h-4" />
+                  <span>{r.label} Portal</span>
+                </>
+              );
+            })()}
+          </div>
+        ) : (
         <div className="grid grid-cols-2 gap-2 p-1 rounded-2xl bg-bg-tertiary border border-border mb-4" role="radiogroup" aria-label="I am a">
           {roleOptions.map((r) => {
             const Icon = r.icon;
@@ -436,6 +471,7 @@ export function UnifiedAuthPage() {
             );
           })}
         </div>
+        )}
 
         {/* Mode tabs — Sign in / Register */}
         <div className="grid grid-cols-2 gap-2 mb-5" role="tablist" aria-label="Sign in or register">
