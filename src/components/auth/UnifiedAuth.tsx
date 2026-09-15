@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import { GraduationCap, Mic, KeyRound, Mail } from "lucide-react";
-import { useSignIn } from "@clerk/nextjs";
+import { useAuth, useSignIn } from "@clerk/nextjs";
 import { AuthLayout } from "@/components/auth/AuthLayout";
 import { AuthCard } from "@/components/auth/AuthCard";
 import { AuthHeader } from "@/components/auth/AuthHeader";
@@ -49,8 +49,26 @@ function toCookieRole(backendRole: string | undefined, fallback: Portal): UserRo
   return fallback;
 }
 
+/**
+ * Clerk already has an active session (from an earlier Google sign-in) —
+ * creating another sign-in would 400 with "session_exists". Forward
+ * straight to the role callback, which exchanges the existing Clerk session
+ * for a backend session and routes to the matching dashboard.
+ */
+function ClerkSessionForward({ role }: { role: Portal }) {
+  const { isLoaded, isSignedIn } = useAuth();
+
+  useEffect(() => {
+    if (isLoaded && isSignedIn) {
+      window.location.replace(`/auth/clerk-callback?role=${role}`);
+    }
+  }, [isLoaded, isSignedIn, role]);
+
+  return null;
+}
+
 function GoogleIcon() {
-  return (
+    return (
     <svg className="w-4 h-4" viewBox="0 0 24 24" aria-hidden="true">
       <path fill="#4285F4" d="M23.5 12.27c0-.85-.08-1.66-.22-2.45H12v4.64h6.45a5.52 5.52 0 0 1-2.39 3.62v3h3.87c2.26-2.09 3.57-5.16 3.57-8.81z" />
       <path fill="#34A853" d="M12 24c3.24 0 5.96-1.07 7.94-2.91l-3.87-3c-1.07.72-2.44 1.15-4.07 1.15-3.13 0-5.78-2.11-6.73-4.96H1.29v3.1A12 12 0 0 0 12 24z" />
@@ -421,6 +439,7 @@ export function UnifiedAuthPage({
   return (
     <AuthLayout>
       <AuthCard>
+        {CLERK_ENABLED && <ClerkSessionForward role={portal} />}
         <div className="text-center mb-5">
           <AuthHeader
             title="Welcome"
