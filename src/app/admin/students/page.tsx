@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useMemo, useEffect } from "react";
-import { Search, Eye, X, Shield, AlertTriangle, RefreshCw, Info } from "lucide-react";
+import { Search, Eye, X, Shield, AlertTriangle, RefreshCw, Info, Plus, Trash2 } from "lucide-react";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
@@ -47,6 +47,10 @@ export default function StudentsPage() {
   const [activeFilter, setActiveFilter] = useState<string>("All");
   const [selectedStudent, setSelectedStudent] = useState<UiStudent | null>(null);
   const [saving, setSaving] = useState(false);
+  const [showCreate, setShowCreate] = useState(false);
+  const [createForm, setCreateForm] = useState({ external_id: "", name: "", email: "" });
+  const [createError, setCreateError] = useState("");
+  const [creating, setCreating] = useState(false);
 
   const patchStudent = async (
     id: number,
@@ -70,6 +74,46 @@ export default function StudentsPage() {
       }
     } catch (e) {
       setError(e instanceof Error ? e.message : "Update failed. Please try again.");
+    }
+    setSaving(false);
+  };
+
+  const handleCreate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setCreateError("");
+    if (!createForm.external_id.trim() || !createForm.name.trim()) {
+      setCreateError("Student ID and Name are required.");
+      return;
+    }
+    setCreating(true);
+    try {
+      await adminApi.createStudent({
+        external_id: createForm.external_id.trim(),
+        name: createForm.name.trim(),
+        email: createForm.email.trim() || undefined,
+      });
+      setShowCreate(false);
+      setCreateForm({ external_id: "", name: "", email: "" });
+      load();
+    } catch (err) {
+      setCreateError(err instanceof Error ? err.message : "Failed to create student.");
+    }
+    setCreating(false);
+  };
+
+  const handleDelete = async (student: UiStudent) => {
+    if (!confirm(`Deactivate ${student.name || student.displayId}? They will no longer be able to log in.`)) return;
+    setSaving(true);
+    try {
+      await adminApi.updateStudentStatus(student.id, false);
+      setStudents((prev) =>
+        prev.map((s) => (s.id === student.id ? { ...s, is_active: false } : s))
+      );
+      if (selectedStudent?.id === student.id) {
+        setSelectedStudent((prev) => (prev ? { ...prev, is_active: false } : prev));
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to deactivate student.");
     }
     setSaving(false);
   };
@@ -132,10 +176,16 @@ export default function StudentsPage() {
               Real accounts from the database.
             </p>
           </div>
-          <Button variant="outline" size="sm" onClick={load} className="gap-1.5" disabled={loading}>
-            <RefreshCw className={`w-3.5 h-3.5 ${loading ? "animate-spin" : ""}`} />
-            Refresh
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button variant="primary" size="sm" onClick={() => setShowCreate(true)} className="gap-1.5">
+              <Plus className="w-3.5 h-3.5" />
+              New Student
+            </Button>
+            <Button variant="outline" size="sm" onClick={load} className="gap-1.5" disabled={loading}>
+              <RefreshCw className={`w-3.5 h-3.5 ${loading ? "animate-spin" : ""}`} />
+              Refresh
+            </Button>
+          </div>
         </div>
 
         {error && (
@@ -417,7 +467,17 @@ export default function StudentsPage() {
                 </p>
               </div>
 
-              <div className="flex justify-end pt-2">
+              <div className="flex justify-between pt-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={saving}
+                  onClick={() => handleDelete(selectedStudent)}
+                  className="gap-1.5 text-error-600 border-error-200 hover:bg-error-50"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                  Deactivate
+                </Button>
                 <Button variant="secondary" onClick={() => setSelectedStudent(null)} className="gap-1.5">
                   <X className="w-4 h-4" />
                   Close
@@ -425,6 +485,55 @@ export default function StudentsPage() {
               </div>
             </div>
           )}
+        </Modal>
+
+        <Modal isOpen={showCreate} onClose={() => setShowCreate(false)} title="Create Student">
+          <form onSubmit={handleCreate} className="space-y-4">
+            {createError && (
+              <div className="flex items-center gap-2 p-3 rounded-xl bg-error-50 border border-error-200">
+                <AlertTriangle className="w-4 h-4 text-error-500" />
+                <p className="text-sm text-error-600">{createError}</p>
+              </div>
+            )}
+            <div>
+              <label className="block text-sm font-medium text-text-secondary mb-1">Student ID *</label>
+              <input
+                type="text"
+                value={createForm.external_id}
+                onChange={(e) => setCreateForm((f) => ({ ...f, external_id: e.target.value }))}
+                placeholder="e.g. 2024001"
+                className="w-full px-3 py-2.5 text-sm bg-white border border-border rounded-xl text-text-primary placeholder:text-text-muted focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-text-secondary mb-1">Full Name *</label>
+              <input
+                type="text"
+                value={createForm.name}
+                onChange={(e) => setCreateForm((f) => ({ ...f, name: e.target.value }))}
+                placeholder="e.g. John Doe"
+                className="w-full px-3 py-2.5 text-sm bg-white border border-border rounded-xl text-text-primary placeholder:text-text-muted focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-text-secondary mb-1">Email (optional)</label>
+              <input
+                type="email"
+                value={createForm.email}
+                onChange={(e) => setCreateForm((f) => ({ ...f, email: e.target.value }))}
+                placeholder="e.g. john@college.edu"
+                className="w-full px-3 py-2.5 text-sm bg-white border border-border rounded-xl text-text-primary placeholder:text-text-muted focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all"
+              />
+            </div>
+            <div className="flex justify-end gap-2 pt-2">
+              <Button variant="secondary" type="button" onClick={() => setShowCreate(false)} disabled={creating}>
+                Cancel
+              </Button>
+              <Button variant="primary" type="submit" disabled={creating} className="gap-1.5">
+                {creating ? "Creating…" : "Create Student"}
+              </Button>
+            </div>
+          </form>
         </Modal>
       </div>
     </AdminLayout>

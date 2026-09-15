@@ -154,9 +154,17 @@ export const adminApi = {
   // Students (GET /admin/students)
   getStudents: () => api.get<{ students?: AdminStudentRecord[] } | AdminStudentRecord[]>("/admin/students"),
 
+  // Create a student (POST /admin/students)
+  createStudent: (body: { external_id: string; name: string; email?: string }) =>
+    api.post<{ data: AdminStudentRecord }>("/admin/students", body),
+
   // Update a student (PATCH /admin/students/:id) — voting eligibility + role management
   updateStudent: (id: number, patch: { voting_eligible?: boolean; role?: string; name?: string; email?: string | null; department?: string; year_or_semester?: string; section?: string | null }) =>
     api.patch<{ data: AdminStudentRecord }>(`/admin/students/${id}`, patch),
+
+  // Deactivate/activate student status (PATCH /admin/students/:id/status)
+  updateStudentStatus: (id: number, is_active: boolean) =>
+    api.patch(`/admin/students/${id}/status`, { is_active }),
 
   // Elections (GET /admin/elections)
   getElections: () => api.get<{ elections?: AdminElectionRecord[] } | AdminElectionRecord[]>("/admin/elections"),

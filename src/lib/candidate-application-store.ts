@@ -71,7 +71,9 @@ export async function getAllApplications(): Promise<CandidateApplicationData[]> 
       department: a.department || "—",
       year: a.year || "—",
       section: a.section || "",
-      position: a.position || a.contestingPosition || "—",
+      position: a.category === "CR"
+        ? [a.department, a.year, a.section ? `Section ${a.section}` : ""].filter(Boolean).join(" ") || "—"
+        : a.position || a.contestingPosition || "—",
       email: a.email || "—",
       phone: a.phone || "—",
       photo: a.profilePhotoUrl || a.photo || null,
@@ -196,7 +198,9 @@ export async function updateApplicationStatus(
     department: app?.department || "—",
     year: app?.year || "—",
     section: app?.section || "",
-    position: app?.position || app?.contestingPosition || "—",
+    position: app?.category === "CR"
+      ? [app?.department, app?.year, app?.section ? `Section ${app.section}` : ""].filter(Boolean).join(" ") || "—"
+      : app?.position || app?.contestingPosition || "—",
     email: app?.email || "—",
     phone: app?.phone || "—",
     photo: app?.profilePhotoUrl || null,
