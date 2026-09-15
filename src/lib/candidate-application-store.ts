@@ -64,15 +64,20 @@ export async function getAllApplications(): Promise<CandidateApplicationData[]> 
   try {
     const res: any = await candidateApi.listApplications();
     const apps: any[] = res?.candidates || res?.data || [];
-    return (apps || []).map((a: any) => ({
+    return (apps || []).map((a: any) => {
+      const isCR = a.category !== "CLUB";
+      const seatParts = [a.department, a.year, a.section ? `Section ${a.section}` : ""].filter(
+        (p) => p && p !== "—"
+      );
+      return {
       id: String(a.id),
       name: a.fullName || a.name || "—",
       enrollmentNumber: a.enrollmentNumber || "—",
       department: a.department || "—",
       year: a.year || "—",
       section: a.section || "",
-      position: a.category === "CR"
-        ? [a.department, a.year, a.section ? `Section ${a.section}` : ""].filter(Boolean).join(" ") || "—"
+      position: isCR
+        ? seatParts.join(" ") || "Class Representative"
         : a.position || a.contestingPosition || "—",
       email: a.email || "—",
       phone: a.phone || "—",
@@ -87,7 +92,8 @@ export async function getAllApplications(): Promise<CandidateApplicationData[]> 
       category: (a.category === "CLUB" ? "CLUB" : "CR") as "CLUB" | "CR",
       electionId: a.electionId ?? null,
       constituencyId: a.constituencyId ?? null,
-    }));
+      };
+    });
   } catch {
     return [];
   }
@@ -191,6 +197,10 @@ export async function updateApplicationStatus(
     throw new Error(`Unsupported status transition: ${status}`);
   }
   const app: any = result?.application || result?.data || result;
+  const isCR = app?.category !== "CLUB";
+  const seatParts = [app?.department, app?.year, app?.section ? `Section ${app.section}` : ""].filter(
+    (p) => p && p !== "—"
+  );
   return {
     id: String(app?.id ?? id),
     name: app?.fullName || "—",
@@ -198,8 +208,8 @@ export async function updateApplicationStatus(
     department: app?.department || "—",
     year: app?.year || "—",
     section: app?.section || "",
-    position: app?.category === "CR"
-      ? [app?.department, app?.year, app?.section ? `Section ${app.section}` : ""].filter(Boolean).join(" ") || "—"
+    position: isCR
+      ? seatParts.join(" ") || "Class Representative"
       : app?.position || app?.contestingPosition || "—",
     email: app?.email || "—",
     phone: app?.phone || "—",

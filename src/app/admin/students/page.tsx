@@ -65,8 +65,8 @@ export default function StudentsPage() {
   ) => {
     setSaving(true);
     try {
-      const res = await adminApi.updateStudent(id, patch);
-      const updated = res?.data;
+      const res: any = await adminApi.updateStudent(id, patch);
+      const updated = res?.data ?? res ?? patch;
       setStudents((prev) =>
         prev.map((s) => (s.id === id ? { ...s, ...(updated ?? patch) } : s))
       );
@@ -129,12 +129,13 @@ export default function StudentsPage() {
     setSaving(true);
     setError("");
     try {
-      const res = await adminApi.bulkSetVotingEligible(true);
-      const updated = res?.data?.updated ?? 0;
+      const res: any = await adminApi.bulkSetVotingEligible(true);
+      const updated = res?.updated ?? res?.data?.updated ?? 0;
       setStudents((prev) => prev.map((s) => ({ ...s, voting_eligible: true })));
       showToast(`Updated ${updated} students to voting-eligible.`, "success");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to update voting eligibility.");
+      showToast("Failed to update voting eligibility.", "error");
     }
     setSaving(false);
   };
