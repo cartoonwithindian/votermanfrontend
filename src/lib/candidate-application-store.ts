@@ -82,7 +82,7 @@ export async function getAllApplications(): Promise<CandidateApplicationData[]> 
       adminNote: a.changesRequestedReason ?? null,
       submittedDate: a.submittedAt || null,
       reviewedDate: a.reviewedAt || null,
-      category: "CR",
+      category: (a.category === "CLUB" ? "CLUB" : "CR") as "CLUB" | "CR",
       electionId: a.electionId ?? null,
       constituencyId: a.constituencyId ?? null,
     }));
@@ -207,7 +207,7 @@ export async function updateApplicationStatus(
     adminNote: app?.changesRequestedReason ?? null,
     submittedDate: app?.submittedAt || null,
     reviewedDate: app?.reviewedAt || null,
-    category: "CR",
+    category: (app?.category === "CLUB" ? "CLUB" : "CR") as "CLUB" | "CR",
     electionId: app?.electionId ?? null,
     constituencyId: app?.constituencyId ?? null,
   };
