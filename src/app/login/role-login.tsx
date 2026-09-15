@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from "react";
 
 import { HelpCircle, ShieldAlert, KeyRound } from "lucide-react";
+import { useSignIn } from "@clerk/nextjs";
 import { AuthLayout } from "@/components/auth/AuthLayout";
 import { AuthCard } from "@/components/auth/AuthCard";
 import { AuthHeader } from "@/components/auth/AuthHeader";
@@ -14,6 +15,62 @@ import { setAuthCookie } from "@/lib/mock-auth";
 import type { UserRole } from "@/lib/auth-types";
 
 const API_BASE = (process.env.NEXT_PUBLIC_API_URL || "/api/v1").replace(/\/$/, "");
+
+// Same flag as RootLayout: ClerkProvider only wraps the app when a key exists.
+const CLERK_ENABLED = !!process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY;
+
+function GoogleIcon() {
+  return (
+    <svg className="w-4 h-4" viewBox="0 0 24 24" aria-hidden="true">
+      <path fill="#4285F4" d="M23.5 12.27c0-.85-.08-1.66-.22-2.45H12v4.64h6.45a5.52 5.52 0 0 1-2.39 3.62v3h3.87c2.26-2.09 3.57-5.16 3.57-8.81z" />
+      <path fill="#34A853" d="M12 24c3.24 0 5.96-1.07 7.94-2.91l-3.87-3c-1.07.72-2.44 1.15-4.07 1.15-3.13 0-5.78-2.11-6.73-4.96H1.29v3.1A12 12 0 0 0 12 24z" />
+      <path fill="#FBBC05" d="M5.27 14.28A7.2 7.2 0 0 1 4.89 12c0-.79.14-1.56.38-2.28v-3.1H1.29a12 12 0 0 0 0 10.76l3.98-3.1z" />
+      <path fill="#EA4335" d="M12 4.77c1.76 0 3.35.61 4.6 1.8l3.42-3.42A11.98 11.98 0 0 0 12 0 12 12 0 0 0 1.29 6.62l3.98 3.1C6.22 6.88 8.87 4.77 12 4.77z" />
+    </svg>
+  );
+}
+
+function GoogleSignInButton({ role }: { role: string }) {
+  const { signIn } = useSignIn();
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+
+  const start = async () => {
+    if (!signIn) return;
+    setBusy(true);
+    setError("");
+    try {
+      const callback = `${window.location.origin}/auth/clerk-callback?role=${encodeURIComponent(role)}`;
+      await signIn.sso({
+        strategy: "oauth_google",
+        redirectUrl: callback,
+        redirectCallbackUrl: callback,
+      });
+    } catch (err) {
+      console.error("Google sign-in failed:", err);
+      setError("Google sign-in could not start. Please try again.");
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div className="space-y-2">
+      <Button variant="outline" onClick={start} disabled={busy || !signIn} isLoading={busy} className="w-full">
+        {!busy && (
+          <>
+            <GoogleIcon />
+            Continue with Google
+          </>
+        )}
+      </Button>
+      {error && (
+        <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm break-words">
+          {error}
+        </div>
+      )}
+    </div>
+  );
+}
 
 const ROLE_LABEL: Record<string, string> = {
   student: "Student",
@@ -286,6 +343,16 @@ export function RoleLoginPage({
           </div>
         ) : (
           <div className="space-y-4">
+            {CLERK_ENABLED && (
+              <>
+                <GoogleSignInButton role={selectedRole} />
+                <div className="flex items-center gap-3 text-xs text-text-muted">
+                  <span className="flex-1 border-t border-border" />
+                  or continue with email
+                  <span className="flex-1 border-t border-border" />
+                </div>
+              </>
+            )}
             {portal === "any" && selectedRole !== "cad" ? (
               <RoleSelector
                 selectedRole={selectedRole}
