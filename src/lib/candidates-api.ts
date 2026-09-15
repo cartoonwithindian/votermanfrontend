@@ -45,6 +45,7 @@ function toCandidate(row: CandidateRow): Candidate {
     biography: bio,
     manifestos: [],
     profilePhotoUrl: row.image_url || undefined,
+    electionName: row.election_name || undefined,
   };
 }
 

@@ -25,6 +25,7 @@ interface CRCandidate {
   position_id: number | null;
   position_name: string | null;
   category: string;
+  photo: string | null;
   status: string;
 }
 
@@ -229,9 +230,17 @@ export default function PositionsPage() {
                             {members.map((c) => (
                               <li key={c.id} className="flex items-center justify-between gap-2">
                                 <div className="flex items-center gap-2 min-w-0">
-                                  <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-semibold text-sm shrink-0">
-                                    {c.full_name.charAt(0).toUpperCase()}
-                                  </div>
+                                  {c.photo ? (
+                                    <img
+                                      src={c.photo}
+                                      alt={c.full_name}
+                                      className="w-8 h-8 rounded-full object-cover shrink-0"
+                                    />
+                                  ) : (
+                                    <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-semibold text-sm shrink-0">
+                                      {c.full_name.charAt(0).toUpperCase()}
+                                    </div>
+                                  )}
                                   <span className="font-medium text-gray-900 text-sm truncate">
                                     {c.full_name}
                                   </span>

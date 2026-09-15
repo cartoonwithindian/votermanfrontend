@@ -5,7 +5,7 @@ import Link from "next/link";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
-import { User, Settings, Scale, Download, FileText, CheckCircle2, Loader2 } from "lucide-react";
+import { User, ArrowLeft, Scale, Download, FileText, CheckCircle2, Loader2 } from "lucide-react";
 import { getCandidate } from "@/lib/candidates-api";
 import type { Candidate } from "@/lib/candidate-data";
 import { useParams, useRouter } from "next/navigation";
@@ -65,20 +65,36 @@ export default function CandidateProfilePage() {
           {/* Profile Header Card */}
           <div className="mb-6">
             <div className="relative h-64 rounded-2xl overflow-hidden mb-5 bg-gradient-to-br from-primary-500 to-primary-700">
-              <div className="absolute inset-0 flex items-center justify-center">
-                <div className="w-24 h-24 rounded-full bg-white/20 flex items-center justify-center">
-                  <span className="text-4xl font-bold text-white">
-                    {candidate.name.split(" ")[0][0]}{candidate.name.split(" ")[1]?.[0] || ""}
-                  </span>
+              {candidate.profilePhotoUrl ? (
+                <img
+                  src={candidate.profilePhotoUrl}
+                  alt={candidate.name}
+                  className="absolute inset-0 h-full w-full object-cover"
+                />
+              ) : (
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <div className="w-24 h-24 rounded-full bg-white/20 flex items-center justify-center">
+                    <span className="text-4xl font-bold text-white">
+                      {candidate.name.split(" ")[0][0]}{candidate.name.split(" ")[1]?.[0] || ""}
+                    </span>
+                  </div>
                 </div>
-              </div>
+              )}
               <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-white to-transparent p-6">
                 <div className="flex items-center gap-3">
-                  <div
-                    className="w-14 h-14 rounded-xl bg-primary-600 flex items-center justify-center font-bold text-white text-base"
-                  >
-                    {candidate.name.split(" ")[0][0]}{candidate.name.split(" ")[1]?.[0] || ""}
-                  </div>
+                  {candidate.profilePhotoUrl ? (
+                    <img
+                      src={candidate.profilePhotoUrl}
+                      alt={candidate.name}
+                      className="w-14 h-14 rounded-xl object-cover"
+                    />
+                  ) : (
+                    <div
+                      className="w-14 h-14 rounded-xl bg-primary-600 flex items-center justify-center font-bold text-white text-base"
+                    >
+                      {candidate.name.split(" ")[0][0]}{candidate.name.split(" ")[1]?.[0] || ""}
+                    </div>
+                  )}
                   <div>
                     <h2 className="font-bold text-text-primary">{candidate.name}</h2>
                     <p className="text-sm text-text-secondary">{candidate.position}</p>
@@ -88,16 +104,20 @@ export default function CandidateProfilePage() {
 
               <div className="flex items-center justify-between px-6 pb-4 flex-wrap gap-3">
                 <div className="flex items-center gap-2 flex-wrap">
-                  <Badge variant="success" className="text-[10px]">✓ Verified Profile</Badge>
+                  {candidate.verified && (
+                    <Badge variant="success" className="text-[10px]">✓ Verified Profile</Badge>
+                  )}
                   <Badge variant="neutral" className="text-[10px]">{candidate.id}</Badge>
                   {candidate.department && (
-                    <span className="text-xs text-text-secondary">{candidate.department}</span>
+                    <span className="text-xs text-text-secondary">
+                      {candidate.department}{candidate.year ? ` • ${candidate.year}` : ""}{candidate.section ? ` • Section ${candidate.section}` : ""}
+                    </span>
                   )}
                 </div>
                 <div className="flex items-center gap-2">
                   <Link href="/student/candidates">
                     <Button variant="ghost" size="sm" className="gap-1.5">
-                      <Settings className="w-3.5 h-3.5" />
+                      <ArrowLeft className="w-3.5 h-3.5" />
                       Back to Candidates
                     </Button>
                   </Link>
@@ -173,17 +193,23 @@ export default function CandidateProfilePage() {
                   <div className="flex justify-between text-sm"><span className="text-text-secondary">Candidate ID</span><span className="font-medium text-text-primary font-mono">{candidate.id}</span></div>
                   <div className="flex justify-between text-sm"><span className="text-text-secondary">Position</span><span className="font-medium text-text-primary">{candidate.position}</span></div>
                   {candidate.department && (
-                    <div className="flex justify-between text-sm"><span className="text-text-secondary">Club</span><span className="font-medium text-text-primary">{candidate.department}</span></div>
+                    <div className="flex justify-between text-sm"><span className="text-text-secondary">Department</span><span className="font-medium text-text-primary">{candidate.department}</span></div>
                   )}
-                  <div className="flex justify-between text-sm"><span className="text-text-secondary">Election</span><span className="font-medium text-text-primary">Student Council Election 2026</span></div>
-                  <div className="flex justify-between text-sm"><span className="text-text-secondary">Profile Status</span><Badge variant="success" className="text-[10px]">Verified</Badge></div>
+                  {candidate.year && (
+                    <div className="flex justify-between text-sm"><span className="text-text-secondary">Year</span><span className="font-medium text-text-primary">{candidate.year}</span></div>
+                  )}
+                  {candidate.section && (
+                    <div className="flex justify-between text-sm"><span className="text-text-secondary">Section</span><span className="font-medium text-text-primary">{candidate.section}</span></div>
+                  )}
+                  <div className="flex justify-between text-sm"><span className="text-text-secondary">Election</span><span className="font-medium text-text-primary">{candidate.electionName || "—"}</span></div>
+                  <div className="flex justify-between text-sm"><span className="text-text-secondary">Profile Status</span>{candidate.verified ? <Badge variant="success" className="text-[10px]">Verified</Badge> : <Badge variant="neutral" className="text-[10px]">Unverified</Badge>}</div>
                 </div>
               </Card>
 
               <div className="space-y-2">
                 <Button variant="secondary" className="w-full gap-2" onClick={() => window.location.href = `/student/candidates/compare?ids=${candidate.id}`}><Scale className="w-4 h-4" />Compare</Button>
                 <Button variant="primary" className="w-full gap-2" onClick={() => router.push('/student/vote')}><CheckCircle2 className="w-4 h-4" />Select for Voting</Button>
-                <Link href="/student/candidates"><Button variant="ghost" className="w-full gap-2 justify-center"><Settings className="w-4 h-4" />Back to Candidates</Button></Link>
+                <Link href="/student/candidates"><Button variant="ghost" className="w-full gap-2 justify-center"><ArrowLeft className="w-4 h-4" />Back to Candidates</Button></Link>
               </div>
             </div>
           </div>

@@ -16,6 +16,9 @@ export type CandidatePosition =
 export type CandidateDepartment =
   | "BCA"
   | "BBA"
+  | "MCA"
+  | "MBA"
+  | "BCom"
   | "B.Tech"
   | "B.Com"
   | "Economics"
@@ -50,6 +53,7 @@ export interface Candidate {
   biography: string;
   manifestos: ManifestoSection[];
   profilePhotoUrl?: string;
+  electionName?: string;
   // Approval status for internal use
   status?: string;
 }
