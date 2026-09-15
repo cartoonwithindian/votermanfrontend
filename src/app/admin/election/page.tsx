@@ -164,6 +164,12 @@ export default function ElectionManagementPage() {
   const [crError, setCrError] = useState("");
   const [crToast, setCrToast] = useState<{ type: "success" | "error"; message: string } | null>(null);
 
+  // Create election
+  const [createModalOpen, setCreateModalOpen] = useState(false);
+  const [createForm, setCreateForm] = useState({ name: "", start_time: "", end_time: "" });
+  const [createSaving, setCreateSaving] = useState(false);
+  const [createError, setCreateError] = useState("");
+
   const selected = elections.find((e) => e.id === selectedId) || null;
 
   const load = useCallback(async () => {
@@ -348,6 +354,28 @@ export default function ElectionManagementPage() {
     setEditDates(false);
   };
 
+  const handleCreateElection = async () => {
+    if (!createForm.name.trim()) {
+      setCreateError("Election name is required.");
+      return;
+    }
+    setCreateSaving(true);
+    setCreateError("");
+    try {
+      await adminApi.createElection({
+        name: createForm.name.trim(),
+        start_time: createForm.start_time ? new Date(createForm.start_time).toISOString() : undefined,
+        end_time: createForm.end_time ? new Date(createForm.end_time).toISOString() : undefined,
+      });
+      setCreateModalOpen(false);
+      setCreateForm({ name: "", start_time: "", end_time: "" });
+      await load();
+    } catch (e) {
+      setCreateError(e instanceof Error ? e.message : "Failed to create election.");
+    }
+    setCreateSaving(false);
+  };
+
   const statCards = stats
     ? [
         { label: "Eligible Students", value: stats.eligibleStudents.toLocaleString(), icon: Users, color: "text-primary-600", bg: "bg-primary-50" },
@@ -373,6 +401,10 @@ export default function ElectionManagementPage() {
             <RefreshCw className={`w-3.5 h-3.5 ${loading ? "animate-spin" : ""}`} />
             Refresh
           </Button>
+          <Button variant="primary" size="sm" onClick={() => setCreateModalOpen(true)} className="gap-1.5">
+            <Plus className="w-3.5 h-3.5" />
+            New Election
+          </Button>
         </div>
 
         {error && (
@@ -396,8 +428,12 @@ export default function ElectionManagementPage() {
             <Inbox className="w-10 h-10 text-text-muted mx-auto mb-3" />
             <h3 className="text-lg font-semibold text-text-primary">No Elections Yet</h3>
             <p className="text-sm text-text-secondary mt-1">
-              No elections exist in the database. Elections appear here once created.
+              No elections exist in the database. Create your first election to get started.
             </p>
+            <Button variant="primary" size="md" className="mt-4 gap-1.5" onClick={() => setCreateModalOpen(true)}>
+              <Plus className="w-4 h-4" />
+              Create Election
+            </Button>
           </Card>
         ) : (
           <>
@@ -838,6 +874,71 @@ export default function ElectionManagementPage() {
               </>
             )}
           </>
+        )}
+
+        {/* Create Election Modal */}
+        {createModalOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+            <div className="bg-white rounded-2xl shadow-xl w-full max-w-md mx-4 p-6">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary-50">
+                    <Vote className="h-5 w-5 text-primary-600" />
+                  </div>
+                  <h3 className="text-lg font-semibold text-text-primary">Create Election</h3>
+                </div>
+                <button onClick={() => setCreateModalOpen(false)} className="text-text-muted hover:text-text-secondary cursor-pointer">
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+              <p className="text-sm text-text-secondary mb-4">
+                Create a new election. It will start in DRAFT status — you can configure clubs, positions, and constituencies before opening it for voting.
+              </p>
+              <div className="grid grid-cols-1 gap-3 mb-4">
+                <div>
+                  <label className="block text-sm font-medium text-text-primary mb-1">Election Name *</label>
+                  <input
+                    type="text"
+                    value={createForm.name}
+                    onChange={(e) => setCreateForm((f) => ({ ...f, name: e.target.value }))}
+                    className="w-full border border-border-strong rounded-xl px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-primary-500"
+                    placeholder="e.g. Student Council Election 2026"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-text-primary mb-1">Start Time (optional)</label>
+                  <input
+                    type="datetime-local"
+                    value={createForm.start_time}
+                    onChange={(e) => setCreateForm((f) => ({ ...f, start_time: e.target.value }))}
+                    className="w-full border border-border-strong rounded-xl px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-text-primary mb-1">End Time (optional)</label>
+                  <input
+                    type="datetime-local"
+                    value={createForm.end_time}
+                    onChange={(e) => setCreateForm((f) => ({ ...f, end_time: e.target.value }))}
+                    className="w-full border border-border-strong rounded-xl px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  />
+                </div>
+              </div>
+              {createError && (
+                <p className="mb-4 text-sm text-error-600 bg-error-50 border border-error-200 rounded-xl px-3 py-2">
+                  {createError}
+                </p>
+              )}
+              <div className="flex justify-end gap-3">
+                <Button variant="outline" size="sm" onClick={() => setCreateModalOpen(false)}>
+                  Cancel
+                </Button>
+                <Button variant="primary" size="sm" onClick={handleCreateElection} disabled={createSaving}>
+                  {createSaving ? "Creating…" : "Create Election"}
+                </Button>
+              </div>
+            </div>
+          </div>
         )}
       </div>
     </AdminLayout>

@@ -196,6 +196,8 @@ export const adminApi = {
   publishElectionResults: (electionId: number | string) => api.post(`/admin/elections/${electionId}/publish`, {}),
 
   // ---- Election management (real /admin/elections CRUD) ----
+  createElection: (body: { name: string; description?: string; start_time?: string; end_time?: string }) =>
+    api.post<{ data: AdminElectionRecord }>("/admin/elections", body),
   updateElection: (id: number | string, body: { name?: string; description?: string; start_time?: string; end_time?: string }) =>
     api.patch<{ data: AdminElectionRecord }>(`/admin/elections/${id}`, body),
   updateElectionStatus: (id: number | string, status: string) =>
