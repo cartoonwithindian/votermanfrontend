@@ -1,6 +1,6 @@
 "use client";
 
-import { RoleRegisterPage } from "./role-register";
+import { RoleRegisterPage } from "../role-register";
 
 export default function Page() {
   return <RoleRegisterPage portal="student" />;
