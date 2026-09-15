@@ -31,17 +31,17 @@ export const CandidateVotingCard: React.FC<CandidateVotingCardProps> = ({
       onClick={() => onSelect(candidate.id)}
     >
       <div className="p-4 sm:p-5">
-        <div className="flex items-start gap-3 mb-3">
+        <div className="flex flex-col items-center text-center gap-3 mb-3 sm:flex-row sm:items-start sm:text-left">
           {candidate.photo ? (
             <img
               src={candidate.photo}
               alt={candidate.name}
-              className="w-12 h-12 rounded-xl object-cover shrink-0"
+              className="w-24 h-24 sm:w-28 sm:h-28 rounded-2xl object-cover shrink-0"
             />
           ) : (
             <div
               className={cn(
-                "w-12 h-12 rounded-xl flex items-center justify-center font-bold text-white text-sm shrink-0",
+                "w-24 h-24 sm:w-28 sm:h-28 rounded-2xl flex items-center justify-center font-bold text-white text-2xl shrink-0",
                 isSelected ? "bg-primary-600" : "bg-primary-400"
               )}
             >
@@ -49,7 +49,7 @@ export const CandidateVotingCard: React.FC<CandidateVotingCardProps> = ({
             </div>
           )}
           <div className="flex-1 min-w-0">
-            <h4 className="font-semibold text-text-primary text-sm leading-tight">
+            <h4 className="font-semibold text-text-primary text-base sm:text-lg leading-tight">
               {candidate.name}
             </h4>
             <p className="text-[11px] text-primary-400 font-mono mt-0.5">
@@ -58,9 +58,6 @@ export const CandidateVotingCard: React.FC<CandidateVotingCardProps> = ({
             <p className="text-[10px] text-text-secondary font-medium uppercase tracking-wider mt-0.5">
               {candidate.department} &bull; {candidate.year}
             </p>
-          </div>
-          <div className="w-8 h-8 rounded-lg bg-white/90 border border-border flex items-center justify-center text-base shrink-0">
-            {candidate.campaignSymbol}
           </div>
         </div>
 

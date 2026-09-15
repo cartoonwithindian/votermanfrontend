@@ -9,7 +9,6 @@ import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import { VotingProgress } from "@/components/voting/VotingProgress";
 import { CandidateVotingCard } from "@/components/voting/CandidateVotingCard";
-import { AbstainOption } from "@/components/voting/AbstainOption";
 import { VotingNavigation } from "@/components/voting/VotingNavigation";
 import { VotingProvider, useVoting } from "@/components/voting/VotingContext";
 import { AlreadyVotedState, VotingClosedState } from "@/components/voting/VotingStates";
@@ -34,7 +33,7 @@ type PageState =
 
 function VotePageInner() {
   const router = useRouter();
-  const { setCandidate, setAbstain, getSelection, seedSelections } = useVoting();
+  const { setCandidate, getSelection, seedSelections } = useVoting();
 
   const [state, setState] = useState<PageState>({ phase: "loading" });
   const [positions, setPositions] = useState<VotingPosition[]>([]);
@@ -104,11 +103,6 @@ function VotePageInner() {
     },
     [currentPositionData, setCandidate]
   );
-
-  const handleAbstain = useCallback(() => {
-    if (!currentPositionData) return;
-    setAbstain(currentPositionData.id);
-  }, [currentPositionData, setAbstain]);
 
   const handlePrevious = useCallback(() => {
     setCurrentPosition((prev) => Math.max(0, prev - 1));
@@ -247,14 +241,9 @@ function VotePageInner() {
               </p>
             )}
 
-            <AbstainOption
-              isAbstained={currentSelection?.candidateId === null}
-              onAbstain={handleAbstain}
-            />
-
             {currentSelection?.candidateId === undefined && (
               <p className="text-xs text-text-secondary text-center py-1">
-                Please select a candidate or choose to abstain.
+                Please select a candidate to continue.
               </p>
             )}
           </div>
