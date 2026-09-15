@@ -103,7 +103,7 @@ export default function AccessRequestStatusPage() {
                 <p className="font-semibold text-gray-900 mb-1">Approved</p>
                 <p className="text-sm text-gray-600 mb-4">{result.message}</p>
                 <Link
-                  href="/login"
+                  href="/student/login"
                   className="inline-flex items-center justify-center px-4 py-2 rounded-lg bg-primary-600 text-white text-sm font-medium hover:bg-primary-700"
                 >
                   Sign in now
@@ -130,7 +130,7 @@ export default function AccessRequestStatusPage() {
             Submit a new access request
           </Link>
           <span className="text-gray-300 mx-2">|</span>
-          <Link href="/login" className="text-xs text-gray-500 hover:text-primary-600">
+          <Link href="/student/login" className="text-xs text-gray-500 hover:text-primary-600">
             ← Back to sign in
           </Link>
         </div>

@@ -26,7 +26,7 @@ export default function SessionExpired({ open }: Props) {
         <h3 className="text-lg font-bold text-text-primary mb-2">Session Expired</h3>
         <p className="text-sm text-text-secondary mb-6">Your session has expired due to inactivity. Please log in again.</p>
         <div className="flex gap-3">
-          <Link href="/login"
+          <Link href="/student/login"
             className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-primary-600 text-white rounded-[12px] text-sm font-semibold hover:bg-primary-500 transition-colors">
             <LogOut size={16} /> Log In Again
           </Link>

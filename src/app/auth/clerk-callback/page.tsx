@@ -94,7 +94,7 @@ export default function ClerkCallbackPage() {
         <div className="max-w-md text-center">
           <h1 className="text-xl font-semibold text-red-700">Sign in failed</h1>
           <p className="mt-2 text-sm text-gray-600">{error}</p>
-          <Link className="mt-4 inline-block text-sm text-primary-600 hover:underline" href="/login">
+          <Link className="mt-4 inline-block text-sm text-primary-600 hover:underline" href="/student/login">
             Return to sign in
           </Link>
         </div>

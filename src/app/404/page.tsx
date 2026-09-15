@@ -38,7 +38,7 @@ export default function NotFoundPage() {
           </Link>
           {cameFromAuth ? (
             <Link
-              href="/login"
+              href="/student/login"
               className="inline-flex items-center justify-center px-5 py-2.5 rounded-lg border border-gray-300 bg-white text-gray-700 text-sm font-medium hover:bg-gray-50 transition"
             >
               <LogIn className="w-4 h-4 mr-2" />
@@ -46,7 +46,7 @@ export default function NotFoundPage() {
             </Link>
           ) : (
             <Link
-              href="/login"
+              href="/student/login"
               className="inline-flex items-center justify-center px-5 py-2.5 rounded-lg border border-gray-300 bg-white text-gray-700 text-sm font-medium hover:bg-gray-50 transition"
             >
               <LogIn className="w-4 h-4 mr-2" />

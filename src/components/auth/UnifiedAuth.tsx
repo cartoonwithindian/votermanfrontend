@@ -135,10 +135,11 @@ export function UnifiedAuthPage({
   const [notice, setNotice] = useState("");
   const [error, setError] = useState("");
 
-  // Deep links: /login?role=candidate, /login?tab=register&role=student
-  // (old /register/* pages redirect here). Also picks up the pending email
-  // left by a failed sign-in that needs registration. Locked portal pages
-  // (/student/login, /candidate/login) ignore role hints and stay fixed.
+  // Deep links: ?tab=register switches to the Register tab. The dedicated
+  // pages (/student/login, /candidate/login) stay locked to their portal;
+  // the catch-all /login/* route redirects here and never renders this form.
+  // Also picks up the pending email left by a failed sign-in that needs
+  // registration. Locked portal pages ignore role hints and stay fixed.
   useEffect(() => {
     try {
       const params = new URLSearchParams(window.location.search);

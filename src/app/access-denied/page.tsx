@@ -11,7 +11,7 @@ const API_BASE = (process.env.NEXT_PUBLIC_API_URL || "").replace(/\/$/, "");
  * Offers a return to the user's actual dashboard when signed in.
  */
 export default function AccessDeniedPage() {
-  const [homeHref, setHomeHref] = useState("/login");
+  const [homeHref, setHomeHref] = useState("/student/login");
 
   useEffect(() => {
     (async () => {

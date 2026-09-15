@@ -88,7 +88,7 @@ export default function AccessRequestPage() {
                 Check your request status →
               </Link>
               <Link
-                href="/login"
+                href="/student/login"
                 className="text-xs text-gray-500 hover:text-primary-600"
               >
                 ← Back to sign in
@@ -216,7 +216,7 @@ export default function AccessRequestPage() {
             Check request status
           </Link>
           <span className="text-gray-300 mx-2">|</span>
-          <Link href="/login" className="text-xs text-gray-500 hover:text-primary-600">
+          <Link href="/student/login" className="text-xs text-gray-500 hover:text-primary-600">
             ← Back to sign in
           </Link>
         </div>

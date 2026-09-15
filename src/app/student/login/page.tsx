@@ -1,6 +1,6 @@
 "use client";
 
-import { UnifiedAuthPage } from "@/app/login/unified-auth";
+import { UnifiedAuthPage } from "@/components/auth/UnifiedAuth";
 
 /**
  * Student portal auth — sign in + registration for students.

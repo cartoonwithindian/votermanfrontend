@@ -60,7 +60,7 @@ export function useSignOut() {
       // Non-fatal.
     }
 
-    // Redirect to login — forces a full page reload so no stale state remains.
-    window.location.href = "/login";
+    // Redirect to the student login — forces a full page reload so no stale state remains.
+    window.location.href = "/student/login";
   }, []);
 }

@@ -65,7 +65,7 @@ export default function HelpPage() {
       <AuthCard>
         <div className="mb-6">
           <Link
-            href="/login"
+            href="/student/login"
             className="inline-flex items-center gap-1 text-sm text-gray-500 hover:text-primary-600 mb-4"
           >
             <ArrowLeft className="w-4 h-4" />

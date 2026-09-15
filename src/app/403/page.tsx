@@ -9,7 +9,7 @@ export default function AccessDenied() {
         </div>
         <h1 className="text-2xl font-bold text-text-primary mb-2">Access Denied</h1>
         <p className="text-sm text-text-secondary mb-8">You do not have permission to access this page. Please contact an administrator if you believe this is an error.</p>
-        <Link href="/login"
+        <Link href="/student/login"
           className="inline-block bg-primary-600 text-white px-8 py-3 rounded-[12px] text-sm font-semibold hover:bg-primary-500 transition-colors">
           Go to Login
         </Link>

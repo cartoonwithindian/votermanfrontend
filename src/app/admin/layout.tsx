@@ -34,7 +34,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           setAllowed(true);
           return;
         }
-        router.replace(role ? getDashboardRoute(role) : "/login");
+        router.replace(role ? getDashboardRoute(role) : "/student/login");
       } catch {
         if (!cancelled) router.replace("/login/admin");
       }

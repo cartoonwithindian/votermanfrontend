@@ -124,7 +124,7 @@ export function SessionExpiredState({ studentName = "Student" }: { studentName?:
             <p className="text-sm text-text-secondary mb-6">
               For your security, please sign in again.
             </p>
-            <Link href="/login">
+            <Link href="/student/login">
               <Button variant="primary" className="gap-2">
                 Sign In Again
               </Button>

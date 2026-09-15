@@ -27,7 +27,7 @@ export default function Home() {
       const justSignedOut = sessionStorage.getItem("campusvote_signed_out");
       if (justSignedOut) {
         sessionStorage.removeItem("campusvote_signed_out");
-        router.replace("/login");
+        router.replace("/student/login");
         return;
       }
     } catch {
@@ -43,9 +43,9 @@ export default function Home() {
           router.replace(getDashboardRoute(role));
           return;
         }
-        router.replace("/login");
+        router.replace("/student/login");
       } catch {
-        if (!cancelled) router.replace("/login");
+        if (!cancelled) router.replace("/student/login");
       }
     })();
     return () => {

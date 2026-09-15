@@ -155,7 +155,7 @@ export default function VerifyPage() {
 
           {/* Back */}
           <div className="text-center">
-            <Link href="/login">
+            <Link href="/student/login">
               <Button variant="secondary" className="gap-2">
                 <ArrowLeft className="w-4 h-4" />
                 Sign In to View Your Receipt

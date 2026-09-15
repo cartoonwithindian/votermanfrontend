@@ -40,7 +40,7 @@ export default function ForgotPasswordPage() {
           </p>
 
           <div className="flex flex-col gap-2 pt-1">
-            <Link href="/login" className="w-full">
+            <Link href="/student/login" className="w-full">
               <Button variant="primary" size="md" className="w-full">
                 Back to sign in
               </Button>

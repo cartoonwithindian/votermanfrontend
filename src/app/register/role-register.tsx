@@ -298,7 +298,7 @@ export function RoleRegisterPage({ portal }: { portal: "student" | "candidate" }
             </Button>
             <div className="text-center text-xs text-text-secondary">
               Already have an account?{" "}
-              <a href="/login" className="text-primary-600 hover:text-primary-700 font-medium">
+              <a href="/student/login" className="text-primary-600 hover:text-primary-700 font-medium">
                 Sign in
               </a>
             </div>

@@ -9,7 +9,7 @@ export default function UnauthorizedPage() {
   const router = useRouter();
   return (
     <AuthLayout>
-      <UnauthorizedState onReturnToLogin={() => router.push("/login")} />
+      <UnauthorizedState onReturnToLogin={() => router.push("/student/login")} />
     </AuthLayout>
   );
 }

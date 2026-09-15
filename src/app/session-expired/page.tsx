@@ -9,7 +9,7 @@ export default function SessionExpiredPage() {
   const router = useRouter();
   return (
     <AuthLayout>
-      <SessionExpiredState onSignInAgain={() => router.push("/login")} />
+      <SessionExpiredState onSignInAgain={() => router.push("/student/login")} />
     </AuthLayout>
   );
 }

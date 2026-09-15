@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 
-// Consolidated into the unified auth page.
+// Consolidated into the student portal login page.
 export default function Page() {
-  redirect("/login?role=student");
+  redirect("/student/login");
 }

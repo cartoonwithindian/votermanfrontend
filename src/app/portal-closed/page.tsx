@@ -17,7 +17,7 @@ export default function PortalClosedPage() {
           election administrator if you need assistance.
         </p>
         <Link
-          href="/login"
+          href="/student/login"
           className="inline-flex items-center justify-center px-5 py-2.5 rounded-lg bg-primary-600 text-white text-sm font-medium hover:bg-primary-700 transition"
         >
           Go to login

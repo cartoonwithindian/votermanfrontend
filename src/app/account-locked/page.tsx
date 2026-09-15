@@ -10,7 +10,7 @@ export default function AccountLockedPage() {
   return (
     <AuthLayout>
       <LockedAccountState
-        onTryAgain={() => router.push("/login")}
+        onTryAgain={() => router.push("/student/login")}
         onContactSupport={() => router.push("/student/help")}
       />
     </AuthLayout>

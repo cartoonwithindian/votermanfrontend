@@ -145,7 +145,7 @@ function VotePageInner() {
             <p className="text-sm text-text-secondary mb-6">
               Please sign in to access the ballot.
             </p>
-            <Link href="/login">
+            <Link href="/student/login">
               <Button variant="primary">Sign In</Button>
             </Link>
           </Card>

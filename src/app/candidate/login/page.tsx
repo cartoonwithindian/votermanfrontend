@@ -1,6 +1,6 @@
 "use client";
 
-import { UnifiedAuthPage } from "@/app/login/unified-auth";
+import { UnifiedAuthPage } from "@/components/auth/UnifiedAuth";
 
 /**
  * Candidate portal auth — sign in + registration for candidates.

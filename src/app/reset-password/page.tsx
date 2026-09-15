@@ -23,7 +23,7 @@ export default function ResetPasswordPage() {
             there is no password to set or reset.
           </p>
           <Link
-            href="/login"
+            href="/student/login"
             className="inline-flex items-center justify-center px-4 py-2 rounded-lg bg-primary-600 text-white text-sm font-medium hover:bg-primary-700"
           >
             Go to sign in
