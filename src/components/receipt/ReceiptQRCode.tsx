@@ -2,7 +2,6 @@
 
 import React from "react";
 import { Card } from "@/components/ui/Card";
-import { QrCode } from "lucide-react";
 
 interface ReceiptQRCodeProps {
   receiptId: string;
@@ -13,6 +12,10 @@ export const ReceiptQRCode: React.FC<ReceiptQRCodeProps> = ({
   receiptId,
   verificationUrl,
 }) => {
+  const origin = typeof window !== "undefined" ? window.location.origin : "";
+  const absoluteUrl = `${origin}${verificationUrl}`;
+  const qrSrc = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(absoluteUrl)}`;
+
   return (
     <Card className="p-5 border-border">
       <div className="text-center">
@@ -23,32 +26,18 @@ export const ReceiptQRCode: React.FC<ReceiptQRCodeProps> = ({
           Scan this code to open the receipt verification page.
         </p>
 
-        {/* Mock QR Code */}
-        <div className="w-40 h-40 mx-auto bg-white border-2 border-border rounded-xl flex items-center justify-center mb-4">
-          <div className="w-32 h-32 grid grid-cols-8 grid-rows-8 gap-0.5">
-            {Array.from({ length: 64 }).map((_, i) => {
-              const row = Math.floor(i / 8);
-              const col = i % 8;
-              const isCorner =
-                (row < 3 && col < 3) ||
-                (row < 3 && col > 4) ||
-                (row > 4 && col < 3);
-              const isDark =
-                isCorner || (row + col) % 3 === 0 || (row * col) % 5 === 0;
-              return (
-                <div
-                  key={i}
-                  className={`rounded-[2px] ${
-                    isDark ? "bg-text-primary" : "bg-white"
-                  }`}
-                />
-              );
-            })}
-          </div>
+        <div className="w-40 h-40 mx-auto bg-white border-2 border-border rounded-xl flex items-center justify-center mb-4 overflow-hidden">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={qrSrc}
+            alt={`QR code for receipt ${receiptId}`}
+            width={150}
+            height={150}
+          />
         </div>
 
-        <p className="text-[10px] text-text-secondary font-mono">
-          {verificationUrl}
+        <p className="text-[10px] text-text-secondary font-mono break-all">
+          {absoluteUrl}
         </p>
       </div>
     </Card>
