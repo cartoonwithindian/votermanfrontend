@@ -99,10 +99,14 @@ export default function CandidateManagementPage() {
 
   const handleApprove = async () => {
     if (!selectedCandidate) return;
-    await updateApplicationStatus(selectedCandidate.id, "approved");
-    showToast(`${selectedCandidate.name} has been approved.`);
-    closeReview();
-    getAllApplications().then(setCandidates).catch(() => {});
+    try {
+      await updateApplicationStatus(selectedCandidate.id, "approved");
+      showToast(`${selectedCandidate.name} has been approved.`);
+      closeReview();
+      getAllApplications().then(setCandidates).catch(() => {});
+    } catch (err: any) {
+      setApproveError(err?.message || "Approval failed. Please try again.");
+    }
   };
 
   const handleRequestChanges = async () => {
