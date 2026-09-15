@@ -73,7 +73,7 @@ class ApiClient {
     const data = await res.json().catch(() => ({}));
 
     if (!res.ok) {
-      throw new ApiError(data.error?.message || data.error || `HTTP ${res.status}`, res.status);
+      throw new ApiError(data.message || data.error?.message || data.error || `HTTP ${res.status}`, res.status);
     }
 
     return data.data || data;
