@@ -166,6 +166,10 @@ export const adminApi = {
   updateStudentStatus: (id: number, is_active: boolean) =>
     api.patch(`/admin/students/${id}/status`, { is_active }),
 
+  // Bulk set voting eligibility for all students (PATCH /admin/students/bulk-voting-eligible)
+  bulkSetVotingEligible: (voting_eligible: boolean, filters?: { role?: string; is_active?: boolean }) =>
+    api.patch<{ data: { updated: number; voting_eligible: boolean } }>("/admin/students/bulk-voting-eligible", { voting_eligible, ...filters }),
+
   // Elections (GET /admin/elections)
   getElections: () => api.get<{ elections?: AdminElectionRecord[] } | AdminElectionRecord[]>("/admin/elections"),
 

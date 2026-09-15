@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useMemo, useEffect } from "react";
-import { Search, Eye, X, Shield, AlertTriangle, RefreshCw, Info, Plus, Trash2 } from "lucide-react";
+import { Search, Eye, X, Shield, AlertTriangle, RefreshCw, Info, Plus, Trash2, Vote, CheckCircle2 } from "lucide-react";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
@@ -51,6 +51,7 @@ export default function StudentsPage() {
   const [createForm, setCreateForm] = useState({ external_id: "", name: "", email: "" });
   const [createError, setCreateError] = useState("");
   const [creating, setCreating] = useState(false);
+  const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
 
   const patchStudent = async (
     id: number,
@@ -76,6 +77,11 @@ export default function StudentsPage() {
       setError(e instanceof Error ? e.message : "Update failed. Please try again.");
     }
     setSaving(false);
+  };
+
+  const showToast = (message: string, type: "success" | "error" = "success") => {
+    setToast({ message, type });
+    setTimeout(() => setToast(null), 3000);
   };
 
   const handleCreate = async (e: React.FormEvent) => {
@@ -114,6 +120,21 @@ export default function StudentsPage() {
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to deactivate student.");
+    }
+    setSaving(false);
+  };
+
+  const handleAllowAllToVote = async () => {
+    if (!confirm("Set ALL students as voting-eligible? This cannot be undone in bulk.")) return;
+    setSaving(true);
+    setError("");
+    try {
+      const res = await adminApi.bulkSetVotingEligible(true);
+      const updated = res?.data?.updated ?? 0;
+      setStudents((prev) => prev.map((s) => ({ ...s, voting_eligible: true })));
+      showToast(`Updated ${updated} students to voting-eligible.`, "success");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to update voting eligibility.");
     }
     setSaving(false);
   };
@@ -177,6 +198,10 @@ export default function StudentsPage() {
             </p>
           </div>
           <div className="flex items-center gap-2">
+            <Button variant="primary" size="sm" onClick={handleAllowAllToVote} disabled={saving} className="gap-1.5">
+              <Vote className="w-3.5 h-3.5" />
+              Allow All to Vote
+            </Button>
             <Button variant="primary" size="sm" onClick={() => setShowCreate(true)} className="gap-1.5">
               <Plus className="w-3.5 h-3.5" />
               New Student
@@ -535,6 +560,19 @@ export default function StudentsPage() {
             </div>
           </form>
         </Modal>
+
+        {toast && (
+          <div className="fixed bottom-6 right-6 z-50">
+            <div className={`flex items-center gap-2 px-4 py-3 rounded-xl shadow-lg text-sm font-medium ${
+              toast.type === "success"
+                ? "bg-success-50 text-success-700 border border-success-200"
+                : "bg-error-50 text-error-700 border border-error-200"
+            }`}>
+              {toast.type === "success" ? <CheckCircle2 className="w-4 h-4" /> : <AlertTriangle className="w-4 h-4" />}
+              {toast.message}
+            </div>
+          </div>
+        )}
       </div>
     </AdminLayout>
   );
