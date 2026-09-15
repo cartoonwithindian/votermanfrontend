@@ -218,11 +218,10 @@ export function UnifiedAuthPage() {
 
       if (!res.ok) {
         if (res.status === 404 || data.data?.needsRegistration) {
-          sessionStorage.setItem("campusvote_pending_email", normalized);
-          sessionStorage.setItem("campusvote_pending_role", portal);
+          // Unknown email: say so on the sign-in form and carry the email
+          // over so the Register tab picks it up — but stay here.
           setRegEmail(normalized);
-          setMode("register");
-          setNotice("No account found for that email — complete your registration to continue.");
+          setError("No account found for this email. Please register first.");
           setIsLoggingIn(false);
           return;
         }
