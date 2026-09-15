@@ -1,5 +1,8 @@
 "use client";
 
+// This page is loaded dynamically (via page.tsx) to avoid static generation
+// because Clerk's useAuth hook requires ClerkProvider context.
+
 import { useEffect, useState } from "react";
 import { useAuth, useUser } from "@clerk/nextjs";
 import Link from "next/link";
@@ -35,62 +38,60 @@ export default function ClerkCallbackContent() {
     let cancelled = false;
     (async () => {
       try {
-        const csrfRes = await fetch(`${API_BASE}/auth/csrf`, { credentials: "include" });
-        const { data: csrfData } = await csrfRes.json();
-        const csrfToken = csrfData?.csrfToken || "";
+        const csrfResponse = await fetch(`${API_BASE}/auth/csrf`, {
+          credentials: "include",
+        });
+        const csrfData = await csrfResponse.json().catch(() => ({}));
+        const csrfToken = csrfData.data?.csrfToken || "";
+        const token = await getToken({ skipCache: true });
+        const requestedRole = new URLSearchParams(window.location.search).get("role") || "student";
 
-        const backendToken = await getToken();
-        if (cancelled) return;
+        if (!token) {
+          throw new Error("Clerk did not return a session token.");
+        }
 
-        const role =
-          (user?.publicMetadata?.role as string) ||
-          (user?.unsafeMetadata?.role as string) ||
-          "STUDENT";
-
-        const res = await fetch(`${API_BASE}/auth/clerk/verify-login`, {
+        const response = await fetch(`${API_BASE}/auth/clerk-session`, {
           method: "POST",
+          credentials: "include",
           headers: {
             "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
             "X-CSRF-Token": csrfToken,
           },
-          credentials: "include",
           body: JSON.stringify({
-            token: backendToken,
-            role,
+            role: requestedRole,
+            name: user?.fullName || user?.firstName || "",
           }),
         });
 
         if (cancelled) return;
 
-        if (!res.ok) {
-          const body = await res.json().catch(() => ({}));
-          const msg = body?.error?.message || body?.message || `Error ${res.status}`;
-          setError(msg);
-          return;
+        const body = await response.json().catch(() => ({}));
+
+        if (!response.ok) {
+          throw new Error(body.error?.message || "Unable to create the application session.");
         }
 
-        const { data } = await res.json();
-
-        if (data?.needsRegistration) {
-          const redirectParams = new URLSearchParams({
-            email: data.email,
-            role: data.role,
-            fromClerk: "1",
-          });
-          window.location.href = `/register/student?${redirectParams.toString()}`;
-          return;
+        const account = body.data?.user;
+        const role = toUserRole(account?.role);
+        if (body.data?.bindingToken) setBindingToken(body.data.bindingToken);
+        if (account) {
+          setAuthCookie(
+            role,
+            account.name || user?.fullName || "",
+            account.email || user?.primaryEmailAddress?.emailAddress || ""
+          );
         }
 
-        await setBindingToken(data?.sessionToken || data?.token || "");
-        const userRole = toUserRole(data?.user?.role || role);
-        const userName = user?.fullName || user?.firstName || "User";
-        const userEmail = user?.emailAddresses?.[0]?.emailAddress || user?.primaryEmailAddress?.emailAddress || "";
-        setAuthCookie(userRole, userName, userEmail);
-        window.location.href = getDashboardRoute(userRole);
+        // The backend account role decides the destination — never the
+        // portal the user started from. (CandidateLayout bounces unapproved
+        // applicants from the dashboard to /candidate/status.)
+        const destination = getDashboardRoute(role);
+        if (!cancelled) window.location.replace(destination);
       } catch (err) {
         if (cancelled) return;
         console.error("Clerk callback error:", err);
-        setError("Sign in failed. Please try again.");
+        setError(err instanceof Error ? err.message : "Unable to complete sign in.");
       }
     })();
 
