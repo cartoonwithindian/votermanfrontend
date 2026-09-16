@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import { GraduationCap, Mic, KeyRound, Mail } from "lucide-react";
-import { useAuth, useSignIn } from "@clerk/nextjs";
+import { useAuth, useSignIn, useSignUp } from "@clerk/nextjs";
 import { AuthLayout } from "@/components/auth/AuthLayout";
 import { AuthCard } from "@/components/auth/AuthCard";
 import { AuthHeader } from "@/components/auth/AuthHeader";
@@ -57,32 +57,38 @@ function GoogleIcon() {
   );
 }
 
-function GoogleSignInButton({ role }: { role: Portal }) {
+function GoogleSignInButton({ role, mode }: { role: Portal; mode: Mode }) {
   const { signIn } = useSignIn();
+  const { signUp } = useSignUp();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
 
   const start = async () => {
-    if (!signIn) return;
+    if (!signIn || !signUp) return;
     setBusy(true);
     setError("");
     try {
       const callback = `${window.location.origin}/auth/clerk-callback?role=${encodeURIComponent(role)}`;
-      await signIn.sso({
-        strategy: "oauth_google",
+      const params = {
+        strategy: "oauth_google" as const,
         redirectUrl: callback,
         redirectCallbackUrl: callback,
-      });
+      };
+      if (mode === "register") {
+        await signUp.sso(params);
+      } else {
+        await signIn.sso(params);
+      }
     } catch (err) {
       console.error("Google sign-in failed:", err);
-      setError("Google sign-in could not start. Please try again.");
+      setError(mode === "register" ? "Google sign-up could not start. Please try again." : "Google sign-in could not start. Please try again.");
       setBusy(false);
     }
   };
 
   return (
     <div className="space-y-2">
-      <Button variant="outline" onClick={start} disabled={busy || !signIn} isLoading={busy} className="w-full">
+      <Button variant="outline" onClick={start} disabled={busy || !signIn || !signUp} isLoading={busy} className="w-full">
         {!busy && (
           <>
             <GoogleIcon />
@@ -508,7 +514,7 @@ export function UnifiedAuthPage({
 
         {CLERK_ENABLED && (
           <>
-            <GoogleSignInButton role={portal} />
+            <GoogleSignInButton role={portal} mode={mode} />
             <div className="flex items-center gap-3 text-xs text-text-muted my-4">
               <span className="flex-1 border-t border-border" />
               or continue with email
