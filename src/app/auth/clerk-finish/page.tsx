@@ -4,8 +4,8 @@
 // because Clerk's useAuth hook requires ClerkProvider context
 import dynamic from 'next/dynamic';
 
-const SsoCallbackContent = dynamic(
-  () => import('./SsoCallbackContent').then((mod) => mod.default),
+const FinishContent = dynamic(
+  () => import('./FinishContent').then((mod) => mod.default),
   { ssr: false, loading: () => <LoadingSpinner /> }
 );
 
@@ -20,6 +20,6 @@ function LoadingSpinner() {
   );
 }
 
-export default function ClerkCallbackPage() {
-  return <SsoCallbackContent />;
+export default function ClerkFinishPage() {
+  return <FinishContent />;
 }

@@ -32,6 +32,17 @@ export default function ClerkCallbackContent() {
   const { user } = useUser();
   const [error, setError] = useState("");
 
+  // Stale visit guard: if Clerk never reports a session (no OAuth
+  // round-trip just happened), stop spinning and send the user back
+  // instead of hanging on the loader forever.
+  useEffect(() => {
+    if (!isLoaded || isSignedIn || error) return;
+    const t = setTimeout(() => {
+      setError("We couldn't find a sign-in session. Please try signing in again.");
+    }, 8000);
+    return () => clearTimeout(t);
+  }, [isLoaded, isSignedIn, error]);
+
   useEffect(() => {
     if (!isLoaded || !isSignedIn) return;
 
