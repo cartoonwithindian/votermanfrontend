@@ -34,7 +34,13 @@ export interface ActiveSession {
 
 export const studentApi = {
   getProfile: () => api.get<StudentProfile>("/students/profile"),
-  updateProfile: (data: Partial<StudentProfile>) => api.put<StudentProfile>("/students/profile", data),
+  updateProfile: (data: Partial<StudentProfile> & { profileImageUrl?: string | null; avatar?: string | null }) =>
+    api.patch<StudentProfile>("/students/profile", data),
+  uploadProfileImage: (dataUrl: string) =>
+    // Uses same Appwrite bucket but folder "profiles/" — education pack
+    api.post<{ url: string; fileId: string; bucketId: string; folder: string }>("/uploads/profile", {
+      image: dataUrl,
+    }),
   getNotificationSettings: () => api.get<NotificationSettings>("/students/notifications/settings"),
   updateNotificationSettings: (data: Partial<NotificationSettings>) => api.put("/students/notifications/settings", data),
   getActiveSessions: () => api.get<ActiveSession[]>("/students/sessions"),

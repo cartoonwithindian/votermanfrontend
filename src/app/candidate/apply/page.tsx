@@ -10,6 +10,8 @@ import { Badge } from "@/components/ui/Badge";
 import {
   submitApplication,
   getMyApplication,
+  uploadCandidatePhoto,
+  downscaleImageToDataUrl,
 } from "@/lib/candidate-api";
 import { getRollNumber } from "@/lib/roll-number";
 import { seatLabel, normalizeCourse, getBatchesForCourse } from "@/lib/class-data";
@@ -88,6 +90,7 @@ export default function CandidateApplyPage() {
   const [formData, setFormData] = useState<FormData>(INITIAL_FORM);
   const [errors, setErrors] = useState<FormErrors>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
   const [lockedStatus, setLockedStatus] = useState<string | null>(null);
 
@@ -198,52 +201,35 @@ export default function CandidateApplyPage() {
     }
   };
 
-  const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
     if (file.size > 5 * 1024 * 1024) {
       setErrors((prev) => ({ ...prev, photo: "Photo must be under 5MB" }));
       return;
     }
-    // Downscale via canvas (max 512px, JPEG ~85%) before storing. The photo
-    // is saved as a base64 data URL in the database — a raw phone photo is
-    // megabytes of base64, which blows row/payload limits and slows every
-    // load. A 512px JPEG stays in the ~30-80KB range and looks fine at
-    // avatar sizes.
-    const reader = new FileReader();
-    reader.onload = (ev) => {
-      const img = new window.Image();
-      img.onload = () => {
-        const MAX = 512;
-        const scale = Math.min(1, MAX / Math.max(img.width, img.height));
-        const w = Math.max(1, Math.round(img.width * scale));
-        const h = Math.max(1, Math.round(img.height * scale));
-        const canvas = document.createElement("canvas");
-        canvas.width = w;
-        canvas.height = h;
-        const ctx = canvas.getContext("2d");
-        if (!ctx) {
-          // Canvas unavailable — fall back to the original data URL.
-          setFormData((prev) => ({ ...prev, photo: ev.target?.result as string }));
-          return;
-        }
-        ctx.drawImage(img, 0, 0, w, h);
-        setFormData((prev) => ({
-          ...prev,
-          photo: canvas.toDataURL("image/jpeg", 0.85),
-        }));
-        setErrors((prev) => {
-          const next = { ...prev };
-          delete next.photo;
-          return next;
-        });
-      };
-      img.onerror = () => {
-        setErrors((prev) => ({ ...prev, photo: "Could not read that image. Try a different photo." }));
-      };
-      img.src = ev.target?.result as string;
-    };
-    reader.readAsDataURL(file);
+    setErrors((prev) => {
+      const next = { ...prev };
+      delete next.photo;
+      return next;
+    });
+    setUploadingPhoto(true);
+    try {
+      // Downscale via canvas (max 512px, JPEG ~85%) so the JSON payload stays
+      // well under the backend's 1MB body limit, then upload to Appwrite
+      // Storage via the backend. The DB keeps only the returned URL.
+      const dataUrl = await downscaleImageToDataUrl(file);
+      const { url } = await uploadCandidatePhoto(dataUrl);
+      setFormData((prev) => ({ ...prev, photo: url }));
+    } catch (err) {
+      setErrors((prev) => ({
+        ...prev,
+        photo: err instanceof Error ? err.message : "Photo upload failed. Try again.",
+      }));
+    } finally {
+      setUploadingPhoto(false);
+      e.target.value = "";
+    }
   };
 
   const removePhoto = () => {
@@ -811,7 +797,9 @@ export default function CandidateApplyPage() {
               <div className="flex items-center gap-4">
                 <div className="relative group">
                   <div className="w-20 h-20 rounded-2xl bg-bg-tertiary border-2 border-dashed border-border flex items-center justify-center overflow-hidden">
-                    {formData.photo ? (
+                    {uploadingPhoto ? (
+                      <Loader2 className="w-6 h-6 text-text-muted animate-spin" />
+                    ) : formData.photo ? (
                       <img
                         src={formData.photo}
                         alt="Preview"
@@ -821,12 +809,13 @@ export default function CandidateApplyPage() {
                       <Camera className="w-6 h-6 text-text-muted" />
                     )}
                   </div>
-                  <label className="absolute inset-0 flex items-center justify-center bg-black/40 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer">
+                  <label className={`absolute inset-0 flex items-center justify-center bg-black/40 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer ${uploadingPhoto ? "pointer-events-none" : ""}`}>
                     <Camera className="w-5 h-5 text-white" />
                     <input
                       type="file"
                       accept="image/*"
                       onChange={handlePhotoUpload}
+                      disabled={uploadingPhoto}
                       className="hidden"
                     />
                   </label>
@@ -836,6 +825,9 @@ export default function CandidateApplyPage() {
                     Upload a profile photo
                   </p>
                   <p className="text-xs text-text-muted">JPG or PNG, max 5MB</p>
+                  {uploadingPhoto && (
+                    <p className="text-xs text-text-secondary mt-1">Uploading…</p>
+                  )}
                   {formData.photo && (
                     <button
                       onClick={removePhoto}

@@ -5,7 +5,7 @@ import { CandidateLayout } from "@/components/candidate-dashboard/CandidateLayou
 import { Card } from "@/components/ui/Card"
 import { Button } from "@/components/ui/Button"
 import { useCandidateApplication } from "@/hooks/useCandidateApplication"
-import { updateMyProfile } from "@/lib/candidate-api"
+import { updateMyProfile, uploadCandidatePhoto, downscaleImageToDataUrl } from "@/lib/candidate-api"
 import {
   Upload,
   Image,
@@ -58,28 +58,37 @@ export default function CampaignPage() {
   const patchDraft = (patch: Partial<CampaignDraft>) =>
     setDraft((prev) => ({ ...(prev ?? loaded), ...patch }))
 
-  const handleFileSelect = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileSelect = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
 
     const validTypes = ["image/png", "image/jpeg", "image/jpg", "image/webp"]
     if (!validTypes.includes(file.type)) {
       alert("Please upload a PNG, JPG, JPEG, or WEBP image.")
+      e.target.value = ""
       return
     }
 
     if (file.size > 5 * 1024 * 1024) {
       alert("Image size must be less than 5MB.")
+      e.target.value = ""
       return
     }
 
     setIsUploading(true)
-    const reader = new FileReader()
-    reader.onload = () => {
-      patchDraft({ logo: reader.result as string })
+    try {
+      // Downscale via canvas (max 512px, JPEG ~85%) so the JSON payload stays
+      // well under the backend's 1MB body limit, then upload to Appwrite
+      // Storage via the backend. The DB keeps only the returned URL.
+      const dataUrl = await downscaleImageToDataUrl(file)
+      const { url } = await uploadCandidatePhoto(dataUrl)
+      patchDraft({ logo: url })
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "Photo upload failed. Try again.")
+    } finally {
       setIsUploading(false)
+      if (fileInputRef.current) fileInputRef.current.value = ""
     }
-    reader.readAsDataURL(file)
   }, [loaded.logo])
 
   const handleRemoveLogo = () => {
@@ -96,7 +105,7 @@ export default function CampaignPage() {
     setSaveSuccess(false)
     try {
       await updateMyProfile({
-        profilePhotoUrl: values.logo,
+        profilePhotoUrl: values.logo ?? "",
         bio: values.description.trim(),
       })
       setSaveSuccess(true)

@@ -83,6 +83,89 @@ export interface PositionOption {
   name: string;
 }
 
+/**
+ * Downscale an image file via canvas (max `max` px on the long edge, JPEG
+ * ~85%) and return a base64 data-URL. Keeps the upload well under the
+ * backend's 1MB JSON body limit and the Appwrite bucket's 2MB file limit —
+ * a 512px JPEG lands in the ~30-80KB range.
+ */
+export async function downscaleImageToDataUrl(file: File, max = 512): Promise<string> {
+  const dataUrl = await new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result as string);
+    reader.onerror = () => reject(new Error("Could not read that file."));
+    reader.readAsDataURL(file);
+  });
+  const img = await new Promise<HTMLImageElement>((resolve, reject) => {
+    const image = new window.Image();
+    image.onload = () => resolve(image);
+    image.onerror = () => reject(new Error("Could not read that image."));
+    image.src = dataUrl;
+  });
+  const scale = Math.min(1, max / Math.max(img.width, img.height));
+  const w = Math.max(1, Math.round(img.width * scale));
+  const h = Math.max(1, Math.round(img.height * scale));
+  const canvas = document.createElement("canvas");
+  canvas.width = w;
+  canvas.height = h;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return dataUrl; // Canvas unavailable — fall back to the original data URL.
+  ctx.drawImage(img, 0, 0, w, h);
+  return canvas.toDataURL("image/jpeg", 0.85);
+}
+
+// CSRF token for the /api/v1/uploads endpoint (double-submit cookie `cv_csrf`).
+let uploadsCsrfToken: string | null = null;
+
+async function getUploadsCsrfToken(): Promise<string> {
+  if (uploadsCsrfToken !== null && uploadsCsrfToken !== "") return uploadsCsrfToken;
+  try {
+    const res = await fetch(`${API_BASE}/auth/csrf`, { credentials: "include" });
+    const data = await res.json().catch(() => ({}));
+    const token: string = data?.data?.csrfToken || "";
+    uploadsCsrfToken = token;
+    if (token && typeof document !== "undefined") {
+      document.cookie = `cv_csrf=${encodeURIComponent(token)}; path=/; SameSite=Lax; max-age=3600`;
+    }
+    return token;
+  } catch {
+    return "";
+  }
+}
+
+/**
+ * POST /api/v1/uploads/photo — upload a base64 data-URL to the Appwrite
+ * `candidate-photos` bucket via the backend. Returns the public URL to use
+ * as `profilePhotoUrl`.
+ */
+export async function uploadCandidatePhoto(
+  dataUrl: string
+): Promise<{ url: string; fileId: string }> {
+  const headers: Record<string, string> = { "Content-Type": "application/json" };
+  const csrf = await getUploadsCsrfToken();
+  if (csrf) headers["X-CSRF-Token"] = csrf;
+  const binding = bindingToken();
+  if (binding) headers["X-Session-Binding"] = binding;
+
+  let res: Response;
+  try {
+    res = await fetch(`${API_BASE}/uploads/photo`, {
+      method: "POST",
+      headers,
+      credentials: "include",
+      body: JSON.stringify({ image: dataUrl }),
+    });
+  } catch {
+    throw new CandidateApiError("Could not reach the server to upload the photo.", 0);
+  }
+
+  const body = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    throw new CandidateApiError(body?.message || `Photo upload failed (HTTP ${res.status})`, res.status);
+  }
+  return body.data as { url: string; fileId: string };
+}
+
 class CandidateApiError extends Error {
   status: number;
   constructor(message: string, status: number) {
