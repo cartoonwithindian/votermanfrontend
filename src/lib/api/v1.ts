@@ -23,6 +23,7 @@ export interface CurrentUser {
   fullName: string;
   email: string;
   rollNumber?: string | null;
+  mobileNumber?: string | null;
   department?: string | null;
   year?: string | null;
   section?: string | null;

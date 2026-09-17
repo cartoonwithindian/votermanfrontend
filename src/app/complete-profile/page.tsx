@@ -29,6 +29,7 @@ function CompleteProfileForm() {
       : DASHBOARDS.student;
 
   const [rollNumber, setRollNumber] = useState("");
+  const [mobileNumber, setMobileNumber] = useState("");
   const [course, setCourse] = useState<"" | Course>("");
   const [batch, setBatch] = useState<{ section: Section; year: Year | "" }>({ section: "", year: "" });
   const [error, setError] = useState("");
@@ -38,11 +39,6 @@ function CompleteProfileForm() {
     e.preventDefault();
     setError("");
 
-    const roll = rollNumber.trim();
-    if (roll.length < 3 || roll.length > 64) {
-      setError("Please enter a valid roll / enrollment number (3-64 characters).");
-      return;
-    }
     if (!course) {
       setError("Please select your course.");
       return;
@@ -52,14 +48,38 @@ function CompleteProfileForm() {
       return;
     }
 
+    const isFirstYear = batch.year === "1st Year";
+    const payload: {
+      rollNumber?: string;
+      mobileNumber?: string;
+      department: string;
+      year: string;
+      section: string;
+    } = {
+      department: course,
+      year: batch.year,
+      section: batch.section,
+    };
+
+    if (isFirstYear) {
+      const phone = mobileNumber.replace(/[\s()-]/g, "").trim();
+      if (!/^\+?[0-9]{10,15}$/.test(phone)) {
+        setError("Please enter a valid mobile number (10-15 digits, optional + prefix).");
+        return;
+      }
+      payload.mobileNumber = phone;
+    } else {
+      const roll = rollNumber.trim();
+      if (roll.length < 3 || roll.length > 64) {
+        setError("Please enter a valid roll / enrollment number (3-64 characters).");
+        return;
+      }
+      payload.rollNumber = roll;
+    }
+
     setSaving(true);
     try {
-      await api.post("/auth/profile", {
-        rollNumber: roll,
-        department: course,
-        year: batch.year,
-        section: batch.section,
-      });
+      await api.post("/auth/profile", payload);
       router.replace(next);
     } catch (err) {
       setError(
@@ -83,7 +103,7 @@ function CompleteProfileForm() {
           </div>
           <AuthHeader
             title="Complete Your Profile"
-            subtitle="One-time step — your roll number, course and batch"
+            subtitle="One-time step — your course and batch, plus your roll number (2nd/3rd year) or mobile number (1st year)"
           />
         </div>
 
@@ -94,17 +114,6 @@ function CompleteProfileForm() {
         )}
 
         <form onSubmit={handleSubmit} className="space-y-4">
-          <Input
-            id="profile-roll"
-            label="Roll / Enrollment Number"
-            type="text"
-            value={rollNumber}
-            onChange={(e) => setRollNumber(e.target.value)}
-            placeholder="e.g. 2SI21CS001"
-            required
-            autoFocus
-          />
-
           <div className="space-y-1.5">
             <label htmlFor="profile-course" className="text-xs font-medium text-text-secondary">
               Course
@@ -132,6 +141,30 @@ function CompleteProfileForm() {
               required
             />
           </div>
+
+          {batch.year === "1st Year" ? (
+            <Input
+              id="profile-phone"
+              label="Mobile / Phone Number"
+              type="tel"
+              value={mobileNumber}
+              onChange={(e) => setMobileNumber(e.target.value)}
+              placeholder="e.g. +91 98765 43210"
+              required
+              autoFocus
+            />
+          ) : (
+            <Input
+              id="profile-roll"
+              label="Roll / Enrollment Number"
+              type="text"
+              value={rollNumber}
+              onChange={(e) => setRollNumber(e.target.value)}
+              placeholder="e.g. 2SI21CS001"
+              required
+              autoFocus
+            />
+          )}
 
           <Button
             type="submit"

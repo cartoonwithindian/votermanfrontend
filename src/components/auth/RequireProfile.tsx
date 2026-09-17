@@ -8,8 +8,8 @@ import { getMe } from "@/lib/api/v1";
 /**
  * RequireProfile — first-time registration gate.
  * STUDENT/CANDIDATE accounts created by the Clerk bridge start bare
- * (no roll number). Until POST /auth/profile completes, bounce them to
- * /complete-profile. ADMIN/CAD roles are exempt (no class identity).
+ * (no roll number / mobile number). Until POST /auth/profile completes, bounce
+ * them to /complete-profile. ADMIN/CAD roles are exempt (no class identity).
  */
 export function RequireProfile({ children }: { children: React.ReactNode }) {
   const router = useRouter();
@@ -33,7 +33,8 @@ export function RequireProfile({ children }: { children: React.ReactNode }) {
         if (
           u &&
           (u.role === "STUDENT" || u.role === "CANDIDATE") &&
-          !u.rollNumber
+          !u.rollNumber &&
+          !u.mobileNumber
         ) {
           const next = pathname?.startsWith("/") ? pathname : "/student/dashboard";
           router.replace(`/complete-profile?next=${encodeURIComponent(next)}`);
