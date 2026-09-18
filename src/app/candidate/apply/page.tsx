@@ -93,6 +93,12 @@ export default function CandidateApplyPage() {
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
   const [lockedStatus, setLockedStatus] = useState<string | null>(null);
+  // Whitelist student_id (e.g. "BBA-A1-1SEM-001") — the enrollment fallback
+  // for 1st Year candidates, who identify by phone instead of a roll number.
+  const [accountExternalId, setAccountExternalId] = useState("");
+  // 1st Year candidates have not been issued an enrollment number yet — they
+  // identify by phone instead (the backend /auth/profile does the same).
+  const isFirstYear = formData.year === "1st Year";
 
   // Pre-fill from the BACKEND account (the name entered at registration) and
   // the stored roll number. The Clerk profile is no longer the identity
@@ -106,6 +112,7 @@ export default function CandidateApplyPage() {
         if (cancelled || !me.authenticated || !me.user) return;
         const accountName = me.user.fullName || me.user.name || "";
         const accountEmail = me.user.email || "";
+        setAccountExternalId(me.user.externalId || "");
         const storedRoll =
           me.user.rollNumber ||
           getRollNumber("candidate", accountEmail) || getRollNumber("student", accountEmail);
@@ -239,7 +246,15 @@ export default function CandidateApplyPage() {
   const validateStep1 = (): boolean => {
     const newErrors: FormErrors = {};
     if (!formData.name.trim()) newErrors.name = "Full name is required";
-    if (!formData.enrollmentNumber.trim()) newErrors.enrollmentNumber = "Enrollment number is required";
+    if (isFirstYear) {
+      if (!formData.phone.trim()) {
+        newErrors.phone = "Phone number is required";
+      } else if (!/^\+?[\d\s-]{10,15}$/.test(formData.phone)) {
+        newErrors.phone = "Enter a valid phone number";
+      }
+    } else if (!formData.enrollmentNumber.trim()) {
+      newErrors.enrollmentNumber = "Enrollment number is required";
+    }
     if (!formData.department) newErrors.department = "Course is required";
     if (!formData.year) newErrors.year = "Batch is required";
     const hasSectionedBatches =
@@ -263,10 +278,12 @@ export default function CandidateApplyPage() {
     } else if (!emailRegex.test(formData.email)) {
       newErrors.email = "Enter a valid email address";
     }
-    if (!formData.phone.trim()) {
-      newErrors.phone = "Phone number is required";
-    } else if (!/^\+?[\d\s-]{10,15}$/.test(formData.phone)) {
-      newErrors.phone = "Enter a valid phone number";
+    if (!isFirstYear) {
+      if (!formData.phone.trim()) {
+        newErrors.phone = "Phone number is required";
+      } else if (!/^\+?[\d\s-]{10,15}$/.test(formData.phone)) {
+        newErrors.phone = "Enter a valid phone number";
+      }
     }
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -307,7 +324,9 @@ export default function CandidateApplyPage() {
     try {
       await submitApplication({
         fullName: formData.name.trim(),
-        enrollmentNumber: formData.enrollmentNumber.trim(),
+        enrollmentNumber: isFirstYear
+          ? accountExternalId || ""
+          : formData.enrollmentNumber.trim(),
         department: formData.department,
         year: formData.year,
         section: formData.section,
@@ -524,26 +543,49 @@ export default function CandidateApplyPage() {
                 )}
               </div>
 
-              <div>
-                <label className="block text-xs font-medium text-text-secondary mb-1.5">
-                  Enrollment Number <span className="text-error-500">*</span>
-                </label>
-                <div className="relative">
-                  <FileText className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text-muted" />
-                  <input
-                    type="text"
-                    value={formData.enrollmentNumber}
-                    onChange={(e) => handleChange("enrollmentNumber", e.target.value)}
-                    placeholder="e.g. NIT-2024-0847"
-                    className={`w-full pl-10 pr-4 py-2.5 rounded-xl border text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:ring-2 focus:ring-primary-500 ${
-                      errors.enrollmentNumber ? "border-error-500" : "border-border"
-                    }`}
-                  />
+              {isFirstYear ? (
+                <div>
+                  <label className="block text-xs font-medium text-text-secondary mb-1.5">
+                    Phone Number <span className="text-error-500">*</span>
+                  </label>
+                  <div className="relative">
+                    <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text-muted" />
+                    <input
+                      type="tel"
+                      value={formData.phone}
+                      onChange={(e) => handleChange("phone", e.target.value)}
+                      placeholder="e.g. +91 98765 43210"
+                      className={`w-full pl-10 pr-4 py-2.5 rounded-xl border text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:ring-2 focus:ring-primary-500 ${
+                        errors.phone ? "border-error-500" : "border-border"
+                      }`}
+                    />
+                  </div>
+                  {errors.phone && (
+                    <p className="text-xs text-error-600 mt-1">{errors.phone}</p>
+                  )}
                 </div>
-                {errors.enrollmentNumber && (
-                  <p className="text-xs text-error-600 mt-1">{errors.enrollmentNumber}</p>
-                )}
-              </div>
+              ) : (
+                <div>
+                  <label className="block text-xs font-medium text-text-secondary mb-1.5">
+                    Enrollment Number <span className="text-error-500">*</span>
+                  </label>
+                  <div className="relative">
+                    <FileText className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text-muted" />
+                    <input
+                      type="text"
+                      value={formData.enrollmentNumber}
+                      onChange={(e) => handleChange("enrollmentNumber", e.target.value)}
+                      placeholder="e.g. NIT-2024-0847"
+                      className={`w-full pl-10 pr-4 py-2.5 rounded-xl border text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:ring-2 focus:ring-primary-500 ${
+                        errors.enrollmentNumber ? "border-error-500" : "border-border"
+                      }`}
+                    />
+                  </div>
+                  {errors.enrollmentNumber && (
+                    <p className="text-xs text-error-600 mt-1">{errors.enrollmentNumber}</p>
+                  )}
+                </div>
+              )}
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
@@ -737,26 +779,28 @@ export default function CandidateApplyPage() {
                 )}
               </div>
 
-              <div>
-                <label className="block text-xs font-medium text-text-secondary mb-1.5">
-                  Phone Number <span className="text-error-500">*</span>
-                </label>
-                <div className="relative">
-                  <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text-muted" />
-                  <input
-                    type="tel"
-                    value={formData.phone}
-                    onChange={(e) => handleChange("phone", e.target.value)}
-                    placeholder="+91 98765 43210"
-                    className={`w-full pl-10 pr-4 py-2.5 rounded-xl border text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:ring-2 focus:ring-primary-500 ${
-                      errors.phone ? "border-error-500" : "border-border"
-                    }`}
-                  />
+              {!isFirstYear && (
+                <div>
+                  <label className="block text-xs font-medium text-text-secondary mb-1.5">
+                    Phone Number <span className="text-error-500">*</span>
+                  </label>
+                  <div className="relative">
+                    <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text-muted" />
+                    <input
+                      type="tel"
+                      value={formData.phone}
+                      onChange={(e) => handleChange("phone", e.target.value)}
+                      placeholder="+91 98765 43210"
+                      className={`w-full pl-10 pr-4 py-2.5 rounded-xl border text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:ring-2 focus:ring-primary-500 ${
+                        errors.phone ? "border-error-500" : "border-border"
+                      }`}
+                    />
+                  </div>
+                  {errors.phone && (
+                    <p className="text-xs text-error-600 mt-1">{errors.phone}</p>
+                  )}
                 </div>
-                {errors.phone && (
-                  <p className="text-xs text-error-600 mt-1">{errors.phone}</p>
-                )}
-              </div>
+              )}
             </div>
 
             <div className="flex justify-between pt-4 border-t border-border">
