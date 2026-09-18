@@ -4,8 +4,7 @@
 // because Clerk's useAuth hook requires ClerkProvider context.
 
 import { useEffect, useState } from "react";
-import { useAuth, useUser } from "@clerk/nextjs";
-import Link from "next/link";
+import { useAuth, useUser, useClerk } from "@clerk/nextjs";
 import { Loader2 } from "lucide-react";
 import { setBindingToken } from "@/lib/session-binding";
 import { setAuthCookie } from "@/lib/mock-auth";
@@ -30,7 +29,9 @@ function toUserRole(role: unknown): UserRole {
 export default function ClerkCallbackContent() {
   const { isLoaded, isSignedIn, getToken } = useAuth();
   const { user } = useUser();
+  const { signOut } = useClerk();
   const [error, setError] = useState("");
+  const [isWhitelistError, setIsWhitelistError] = useState(false);
 
   // Stale visit guard: if Clerk never reports a session (no OAuth
   // round-trip just happened), stop spinning and send the user back
@@ -80,7 +81,22 @@ export default function ClerkCallbackContent() {
         const body = await response.json().catch(() => ({}));
 
         if (!response.ok) {
-          throw new Error(body.error?.message || "Unable to create the application session.");
+          const msg = body.error?.message || "Unable to create the application session.";
+          const code = body.error?.code || "";
+          // Whitelist failure: remember it and terminate Clerk session to break the
+          // auto-forward loop (login page sees isSignedIn and would otherwise
+          // immediately bounce back to clerk-finish).
+          if (code === "NOT_WHITELISTED" || msg.toLowerCase().includes("not whitelisted") || msg.toLowerCase().includes("whitelisted")) {
+            setIsWhitelistError(true);
+            try {
+              await signOut();
+            } catch {}
+            // Also clear the backend session cookie if any was set
+            try {
+              document.cookie = "cv_sid=; Max-Age=0; path=/;";
+            } catch {}
+          }
+          throw new Error(msg);
         }
 
         const account = body.data?.user;
@@ -114,14 +130,36 @@ export default function ClerkCallbackContent() {
   }, [getToken, isLoaded, isSignedIn, user]);
 
   if (error) {
+    const handleReturn = async () => {
+      try {
+        await signOut();
+      } catch {}
+      try {
+        document.cookie = "cv_sid=; Max-Age=0; path=/;";
+      } catch {}
+      const role = new URLSearchParams(window.location.search).get("role") || "student";
+      const target = role === "candidate" ? "/candidate/login" : "/student/login";
+      window.location.replace(target);
+    };
     return (
       <div className="min-h-screen flex items-center justify-center px-4">
         <div className="max-w-md text-center">
           <h1 className="text-xl font-semibold text-red-700">Sign in failed</h1>
           <p className="mt-2 text-sm text-gray-600">{error}</p>
-          <Link className="mt-4 inline-block text-sm text-primary-600 hover:underline" href="/student/login">
+          {isWhitelistError && (
+            <p className="mt-2 text-xs text-gray-500">
+              Only whitelisted students can login or register. If you believe this is a mistake, please contact the support team with your registered email.
+            </p>
+          )}
+          <button
+            onClick={handleReturn}
+            className="mt-4 inline-block text-sm text-primary-600 hover:underline bg-transparent border-0 cursor-pointer"
+          >
             Return to sign in
-          </Link>
+          </button>
+          <p className="mt-2 text-xs text-gray-400">
+            Your Google session has been signed out to prevent a redirect loop.
+          </p>
         </div>
       </div>
     );
