@@ -104,7 +104,10 @@ export function ClerkRegisterPanel({ portal, initialEmail = "", onGoLogin }: Cle
     }
     setIsSending(true);
     try {
-      const created = await signUp.create({ emailAddress: email.trim().toLowerCase() });
+      const created = await signUp.create({
+        emailAddress: email.trim().toLowerCase(),
+        password,
+      });
       const createErr = normalizeClerkError(created?.error);
       if (createErr) {
         setError(
@@ -164,16 +167,22 @@ export function ClerkRegisterPanel({ portal, initialEmail = "", onGoLogin }: Cle
       }
 
       // Activate the Clerk session, then exchange it for a backend session.
-      if (signUp.createdSessionId) {
-        const fin = await signUp.finalize();
-        if (fin?.error) {
-          setError(fin.error.longMessage || fin.error.message || "Could not complete registration.");
-          setIsVerifying(false);
-          return;
-        }
+      const finalized = await signUp.finalize();
+      if (finalized?.error && !clerk.session) {
+        setError(
+          finalized.error.longMessage || finalized.error.message || "Could not complete registration."
+        );
+        setIsVerifying(false);
+        return;
       }
 
-      const token = await clerk.session?.getToken({ skipCache: true });
+      // The active session can take a few hundred ms to settle after finalize.
+      let token: string | null | undefined = null;
+      for (let attempt = 0; attempt < 10; attempt++) {
+        token = await clerk.session?.getToken({ skipCache: true });
+        if (token) break;
+        await new Promise((r) => setTimeout(r, 300));
+      }
       if (!token) {
         throw new Error("Clerk did not return a session token.");
       }

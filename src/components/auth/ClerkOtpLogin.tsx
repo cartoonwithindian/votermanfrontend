@@ -150,20 +150,25 @@ export function ClerkOtpLogin({
       }
 
       // Activate the Clerk session, then exchange it for a backend session.
-      if (signIn.createdSessionId) {
-        const fin = await signIn.finalize();
-        if (fin?.error) {
-          setError(fin.error.longMessage || fin.error.message || "Could not complete sign-in.");
-          setIsVerifying(false);
-          return;
-        }
+      const finalized = await signIn.finalize();
+      if (finalized?.error && !clerk.session) {
+        setError(finalized.error.longMessage || finalized.error.message || "Could not complete sign-in.");
+        setIsVerifying(false);
+        return;
       }
-      const csrfToken = await fetchCsrfToken();
-      const token = await clerk.session?.getToken({ skipCache: true });
+
+      // The active session can take a few hundred ms to settle after finalize.
+      let token: string | null | undefined = null;
+      for (let attempt = 0; attempt < 10; attempt++) {
+        token = await clerk.session?.getToken({ skipCache: true });
+        if (token) break;
+        await new Promise((r) => setTimeout(r, 300));
+      }
       if (!token) {
         throw new Error("Clerk did not return a session token.");
       }
 
+      const csrfToken = await fetchCsrfToken();
       const response = await fetch(`${API_BASE}/auth/clerk-session`, {
         method: "POST",
         credentials: "include",
