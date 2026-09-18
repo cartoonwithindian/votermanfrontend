@@ -93,10 +93,10 @@ export default function AdminAccessRequestsPage() {
       const matchesSearch =
         q === "" ||
         r.full_name.toLowerCase().includes(q) ||
-        r.student_id.toLowerCase().includes(q) ||
+        (r.student_id || "").toLowerCase().includes(q) ||
         (r.roll_number || "").toLowerCase().includes(q) ||
-        r.college_email.toLowerCase().includes(q) ||
-        r.accessible_email.toLowerCase().includes(q);
+        (r.college_email || "").toLowerCase().includes(q) ||
+        (r.accessible_email || "").toLowerCase().includes(q);
       const matchesStatus = statusFilter === "all" || r.status === statusFilter;
       return matchesSearch && matchesStatus;
     });
@@ -240,7 +240,7 @@ export default function AdminAccessRequestsPage() {
                     <tr key={r.id} className="border-b border-border last:border-b-0 hover:bg-primary-50/40 transition-colors">
                       <td className="py-3 px-4 font-mono text-xs font-medium text-text-primary">SAR-{String(r.id).padStart(5, "0")}</td>
                       <td className="py-3 px-4 font-medium text-text-primary">{r.full_name}</td>
-                      <td className="py-3 px-4 text-text-secondary">{r.student_id}</td>
+                      <td className="py-3 px-4 text-text-secondary">{r.student_id || "—"}</td>
                       <td className="py-3 px-4 text-text-secondary">{r.department || "—"}</td>
                       <td className="py-3 px-4 text-text-secondary">{r.accessible_email}</td>
                       <td className="py-3 px-4 text-text-secondary whitespace-nowrap">{fmtDate(r.created_at)}</td>
@@ -279,7 +279,7 @@ export default function AdminAccessRequestsPage() {
               </div>
               <p className="text-sm text-text-primary font-medium mb-1">{r.full_name}</p>
               <p className="text-xs text-text-tertiary mb-2">
-                {r.student_id} • {r.department || "—"}
+                {r.student_id || "—"} • {r.department || "—"}
               </p>
               <div className="flex items-center justify-between">
                 <p className="text-xs text-text-secondary">{r.accessible_email}</p>
@@ -316,11 +316,11 @@ export default function AdminAccessRequestsPage() {
                 <p className="text-xs font-semibold text-text-tertiary uppercase tracking-wider mb-3">Student details</p>
                 <div className="grid grid-cols-2 gap-3 text-sm">
                   <div><p className="text-text-tertiary text-xs">Full name</p><p className="font-medium text-text-primary">{selected.full_name}</p></div>
-                  <div><p className="text-text-tertiary text-xs">Student ID</p><p className="font-medium text-text-primary">{selected.student_id}</p></div>
+                  <div><p className="text-text-tertiary text-xs">Student ID</p><p className="font-medium text-text-primary">{selected.student_id || "—"}</p></div>
                   <div><p className="text-text-tertiary text-xs">Roll number</p><p className="text-text-primary">{selected.roll_number || "—"}</p></div>
                   <div><p className="text-text-tertiary text-xs">Year / Semester</p><p className="text-text-primary">{selected.year_or_semester || "—"}</p></div>
                   <div className="col-span-2"><p className="text-text-tertiary text-xs">Department</p><p className="text-text-primary">{selected.department || "—"}</p></div>
-                  <div><p className="text-text-tertiary text-xs">College email</p><p className="text-text-primary break-all">{selected.college_email}</p></div>
+                  <div><p className="text-text-tertiary text-xs">College email</p><p className="text-text-primary break-all">{selected.college_email || "—"}</p></div>
                   <div><p className="text-text-tertiary text-xs">Accessible email</p><p className="text-text-primary break-all">{selected.accessible_email}</p></div>
                 </div>
               </Card>

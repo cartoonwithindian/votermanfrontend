@@ -27,13 +27,11 @@ const REASONS = [
 export default function AccessRequestPage() {
   const [form, setForm] = useState({
     fullName: "",
-    studentId: "",
     rollNumber: "",
     department: "",
     yearOrSemester: "",
-    collegeEmail: "",
     accessibleEmail: "",
-    reason: "not_in_list",
+    reason: "cannot_access_email",
     reasonDetail: "",
   });
   const [loading, setLoading] = useState(false);
@@ -125,18 +123,15 @@ export default function AccessRequestPage() {
         <form onSubmit={submit} className="space-y-4">
           <div>
             <label className={labelCls}>Full name *</label>
-            <input type="text" value={form.fullName} onChange={set("fullName")} required maxLength={255} className={inputCls} placeholder="As per college records" />
+            <input type="text" value={form.fullName} onChange={set("fullName")} required maxLength={255} className={inputCls} placeholder="Must match your name in the college records" />
+            <p className="text-xs text-gray-500 mt-1">
+              Enter your name exactly as on the college records. Your registered college email is matched using your name, course and batch.
+            </p>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div>
-              <label className={labelCls}>Student ID *</label>
-              <input type="text" value={form.studentId} onChange={set("studentId")} required maxLength={64} className={inputCls} />
-            </div>
-            <div>
-              <label className={labelCls}>Roll number</label>
-              <input type="text" value={form.rollNumber} onChange={set("rollNumber")} maxLength={64} className={inputCls} />
-            </div>
+          <div>
+            <label className={labelCls}>Roll number</label>
+            <input type="text" value={form.rollNumber} onChange={set("rollNumber")} maxLength={64} className={inputCls} />
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -165,13 +160,11 @@ export default function AccessRequestPage() {
           </div>
 
           <div>
-            <label className={labelCls}>Registered college email *</label>
-            <input type="email" value={form.collegeEmail} onChange={set("collegeEmail")} required className={inputCls} placeholder="The email on your college record" />
-          </div>
-
-          <div>
-            <label className={labelCls}>Current accessible email *</label>
+            <label className={labelCls}>Current email *</label>
             <input type="email" value={form.accessibleEmail} onChange={set("accessibleEmail")} required className={inputCls} placeholder="An inbox you can open right now" />
+            <p className="text-xs text-gray-500 mt-1">
+              We will look up your registered college email using your name and class. This is the email where you will receive login codes.
+            </p>
           </div>
 
           <div>
