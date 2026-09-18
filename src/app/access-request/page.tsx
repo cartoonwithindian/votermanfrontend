@@ -7,43 +7,75 @@ import { AuthLayout } from "@/components/auth/AuthLayout";
 import { AuthCard } from "@/components/auth/AuthCard";
 import { CourseSelect } from "@/components/ui/CourseSelect";
 import { BatchSelect } from "@/components/ui/BatchSelect";
+import { getBatchesForCourse, type Course, type Section, type Year } from "@/lib/class-data";
 
 const API_BASE = (process.env.NEXT_PUBLIC_API_URL || "").replace(/\/$/, "");
-
-const REASONS = [
-  { value: "not_in_list", label: "My email is not in the authorized student list." },
-  { value: "cannot_access_email", label: "I cannot access my registered email." },
-  { value: "incorrect_email", label: "My email address is incorrect." },
-  { value: "other", label: "Other." },
-];
 
 /**
  * Request Voting Access — public page (spec §2).
  *
- * For students who are not on the authorized list or cannot sign in.
- * Approval by an administrator is the ONLY way access is granted; a pending
- * request confers no login and no voting rights.
+ * Students identify themselves with their registered college email (old mail)
+ * and give a working email to switch to (new mail). Approval is the ONLY way
+ * access is granted; a pending request confers no login and no voting rights.
  */
 export default function AccessRequestPage() {
   const [form, setForm] = useState({
-    fullName: "",
-    rollNumber: "",
+    collegeEmail: "",
+    accessibleEmail: "",
     department: "",
     yearOrSemester: "",
-    accessibleEmail: "",
-    reason: "cannot_access_email",
-    reasonDetail: "",
+    section: "",
+    rollNumber: "",
+    phone: "",
   });
+  const [errors, setErrors] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [submitted, setSubmitted] = useState(false);
 
-  const set = (k: string) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) =>
+  const set = (k: string) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     setForm((f) => ({ ...f, [k]: e.target.value }));
+    if (errors[k]) setErrors((prev) => ({ ...prev, [k]: "" }));
+  };
+
+  const handleCourseChange = (c: Course | "") => {
+    setForm((prev) => ({ ...prev, department: c, yearOrSemester: "", section: "" }));
+    setErrors((prev) => ({ ...prev, department: "", year: "", section: "" }));
+  };
+
+  const handleBatchChange = (batch: { section: Section; year: Year }) => {
+    setForm((prev) => ({ ...prev, yearOrSemester: batch.year, section: batch.section }));
+    setErrors((prev) => ({ ...prev, year: "", section: "" }));
+  };
+
+  const validate = (): boolean => {
+    const next: Record<string, string> = {};
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.collegeEmail.trim())) {
+      next.collegeEmail = "Enter your registered college email";
+    }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.accessibleEmail.trim())) {
+      next.accessibleEmail = "Enter a valid current email";
+    }
+    if (!form.department) next.department = "Course is required";
+    if (!form.yearOrSemester) next.year = "Batch is required";
+    const hasSectionedBatches =
+      !!form.department && getBatchesForCourse(form.department as Course).some((b) => b.section);
+    if (hasSectionedBatches && !form.section) next.section = "Batch is required";
+    if (form.rollNumber.trim() && form.rollNumber.trim().length > 64) {
+      next.rollNumber = "Roll number must be at most 64 characters";
+    }
+    if (!/^\+?[\d\s-]{10,15}$/.test(form.phone.trim())) {
+      next.phone = "Phone number is required";
+    }
+    setErrors(next);
+    return Object.keys(next).length === 0;
+  };
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
+    setErrors({});
+    if (!validate()) return;
     setLoading(true);
     try {
       const res = await fetch(`${API_BASE}/access-requests`, {
@@ -101,6 +133,8 @@ export default function AccessRequestPage() {
   const inputCls =
     "w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500";
   const labelCls = "block text-sm font-medium text-gray-700 mb-1";
+  const errText = (k: string) =>
+    errors[k] ? <p className="text-xs text-red-600 mt-1">{errors[k]}</p> : null;
 
   return (
     <AuthLayout>
@@ -120,67 +154,65 @@ export default function AccessRequestPage() {
           </div>
         )}
 
-        <form onSubmit={submit} className="space-y-4">
+        <form onSubmit={submit} className="space-y-4" noValidate>
           <div>
-            <label className={labelCls}>Full name *</label>
-            <input type="text" value={form.fullName} onChange={set("fullName")} required maxLength={255} className={inputCls} placeholder="Must match your name in the college records" />
+            <label className={labelCls}>Registered college email *</label>
+            <input type="email" value={form.collegeEmail} onChange={set("collegeEmail")} className={inputCls} placeholder="The email registered with your college" />
             <p className="text-xs text-gray-500 mt-1">
-              Enter your name exactly as on the college records. Your registered college email is matched using your name, course and batch.
+              This is how we find your class record.
             </p>
-          </div>
-
-          <div>
-            <label className={labelCls}>Roll number</label>
-            <input type="text" value={form.rollNumber} onChange={set("rollNumber")} maxLength={64} className={inputCls} />
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div>
-              <label className={labelCls}>Course</label>
-              <CourseSelect
-                id="access-course"
-                value={form.department}
-                onChange={(c) =>
-                  setForm((f) => ({ ...f, department: c, yearOrSemester: "" }))
-                }
-              />
-            </div>
-            <div>
-              <label className={labelCls}>Batch</label>
-              <BatchSelect
-                id="access-batch"
-                course={form.department as "MBA" | "MCA" | "BBA" | "BCom" | "BCA"}
-                value={{
-                  section: "" as "A1" | "A2" | "A3" | "",
-                  year: form.yearOrSemester as "1st Year" | "2nd Year" | "3rd Year" | "",
-                }}
-                onChange={(b) => setForm((f) => ({ ...f, yearOrSemester: b.year }))}
-              />
-            </div>
+            {errText("collegeEmail")}
           </div>
 
           <div>
             <label className={labelCls}>Current email *</label>
-            <input type="email" value={form.accessibleEmail} onChange={set("accessibleEmail")} required className={inputCls} placeholder="An inbox you can open right now" />
+            <input type="email" value={form.accessibleEmail} onChange={set("accessibleEmail")} className={inputCls} placeholder="An inbox you can open right now" />
             <p className="text-xs text-gray-500 mt-1">
-              We will look up your registered college email using your name and class. This is the email where you will receive login codes.
+              This is the email where you will receive login codes.
             </p>
+            {errText("accessibleEmail")}
           </div>
 
-          <div>
-            <label className={labelCls}>Reason for request *</label>
-            <select value={form.reason} onChange={set("reason")} className={inputCls}>
-              {REASONS.map((r) => (
-                <option key={r.value} value={r.value}>{r.label}</option>
-              ))}
-            </select>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label className={labelCls}>Course *</label>
+              <CourseSelect
+                id="access-course"
+                value={form.department}
+                onChange={handleCourseChange}
+                error={!!errors.department}
+              />
+              {errText("department")}
+            </div>
+            <div>
+              <label className={labelCls}>Batch *</label>
+              <BatchSelect
+                id="access-batch"
+                course={form.department as Course}
+                value={{
+                  section: form.section as Section,
+                  year: form.yearOrSemester as Year | "",
+                }}
+                onChange={handleBatchChange}
+                error={!!errors.year || !!errors.section}
+              />
+              {errText("year") || errText("section")}
+            </div>
           </div>
 
-          <div>
-            <label className={labelCls}>
-              Details <span className="text-gray-400 font-normal">(optional)</span>
-            </label>
-            <textarea value={form.reasonDetail} onChange={set("reasonDetail")} rows={3} maxLength={2000} className={`${inputCls} resize-none`} placeholder="Anything that helps the administrator verify you" />
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label className={labelCls}>
+                Roll number <span className="text-gray-400 font-normal">(optional)</span>
+              </label>
+              <input type="text" value={form.rollNumber} onChange={set("rollNumber")} maxLength={64} className={inputCls} placeholder="If you don't have one yet, skip it" />
+              {errText("rollNumber")}
+            </div>
+            <div>
+              <label className={labelCls}>Phone number *</label>
+              <input type="tel" value={form.phone} onChange={set("phone")} className={inputCls} placeholder="+91 98765 43210" />
+              {errText("phone")}
+            </div>
           </div>
 
           <button

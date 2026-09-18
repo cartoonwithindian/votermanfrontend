@@ -14,7 +14,7 @@ const API_BASE = (process.env.NEXT_PUBLIC_API_URL || "").replace(/\/$/, "");
  * by strangers who know only one value.
  */
 export default function AccessRequestStatusPage() {
-  const [fullName, setFullName] = useState("");
+  const [collegeEmail, setCollegeEmail] = useState("");
   const [accessibleEmail, setAccessibleEmail] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -31,7 +31,7 @@ export default function AccessRequestStatusPage() {
     setResult(null);
     setLoading(true);
     try {
-      const qs = new URLSearchParams({ fullName, accessibleEmail });
+      const qs = new URLSearchParams({ collegeEmail, accessibleEmail });
       const res = await fetch(`${API_BASE}/access-requests/status?${qs.toString()}`);
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
@@ -60,7 +60,7 @@ export default function AccessRequestStatusPage() {
           <Search className="w-10 h-10 text-primary-600 mx-auto mb-3" />
           <h1 className="text-xl font-bold text-gray-900">Check Request Status</h1>
           <p className="text-sm text-gray-500 mt-2">
-            Enter your full name (as in college records) and the current email you used in the request.
+            Enter the registered college email and the current email you used in the request.
           </p>
         </div>
 
@@ -72,8 +72,8 @@ export default function AccessRequestStatusPage() {
 
         <form onSubmit={submit} className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Full name</label>
-            <input type="text" value={fullName} onChange={(e) => setFullName(e.target.value)} required maxLength={255} className={inputCls} />
+            <label className="block text-sm font-medium text-gray-700 mb-1">Registered college email</label>
+            <input type="email" value={collegeEmail} onChange={(e) => setCollegeEmail(e.target.value)} required className={inputCls} />
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Current email</label>

@@ -20,13 +20,15 @@ import {
 
 interface AccessRequest {
   id: number;
-  full_name: string;
+  full_name: string | null;
   student_id: string;
   roll_number: string | null;
   department: string | null;
   year_or_semester: string | null;
+  section: string | null;
   college_email: string;
   accessible_email: string;
+  phone: string | null;
   request_reason: string;
   reason_detail: string | null;
   status: "pending" | "approved" | "rejected";
@@ -92,7 +94,7 @@ export default function AdminAccessRequestsPage() {
     return requests.filter((r) => {
       const matchesSearch =
         q === "" ||
-        r.full_name.toLowerCase().includes(q) ||
+        (r.full_name || "").toLowerCase().includes(q) ||
         (r.student_id || "").toLowerCase().includes(q) ||
         (r.roll_number || "").toLowerCase().includes(q) ||
         (r.college_email || "").toLowerCase().includes(q) ||
@@ -239,7 +241,7 @@ export default function AdminAccessRequestsPage() {
                   {filtered.map((r) => (
                     <tr key={r.id} className="border-b border-border last:border-b-0 hover:bg-primary-50/40 transition-colors">
                       <td className="py-3 px-4 font-mono text-xs font-medium text-text-primary">SAR-{String(r.id).padStart(5, "0")}</td>
-                      <td className="py-3 px-4 font-medium text-text-primary">{r.full_name}</td>
+                      <td className="py-3 px-4 font-medium text-text-primary">{r.full_name || "—"}</td>
                       <td className="py-3 px-4 text-text-secondary">{r.student_id || "—"}</td>
                       <td className="py-3 px-4 text-text-secondary">{r.department || "—"}</td>
                       <td className="py-3 px-4 text-text-secondary">{r.accessible_email}</td>
@@ -277,7 +279,7 @@ export default function AdminAccessRequestsPage() {
                 <span className="font-mono text-xs font-medium text-text-primary">SAR-{String(r.id).padStart(5, "0")}</span>
                 <Badge variant={STATUS_META[r.status].variant}>{STATUS_META[r.status].label}</Badge>
               </div>
-              <p className="text-sm text-text-primary font-medium mb-1">{r.full_name}</p>
+              <p className="text-sm text-text-primary font-medium mb-1">{r.full_name || (r.college_email || r.accessible_email)}</p>
               <p className="text-xs text-text-tertiary mb-2">
                 {r.student_id || "—"} • {r.department || "—"}
               </p>
@@ -315,24 +317,29 @@ export default function AdminAccessRequestsPage() {
               <Card>
                 <p className="text-xs font-semibold text-text-tertiary uppercase tracking-wider mb-3">Student details</p>
                 <div className="grid grid-cols-2 gap-3 text-sm">
-                  <div><p className="text-text-tertiary text-xs">Full name</p><p className="font-medium text-text-primary">{selected.full_name}</p></div>
+                  <div><p className="text-text-tertiary text-xs">Full name</p><p className="font-medium text-text-primary">{selected.full_name || "—"}</p></div>
                   <div><p className="text-text-tertiary text-xs">Student ID</p><p className="font-medium text-text-primary">{selected.student_id || "—"}</p></div>
                   <div><p className="text-text-tertiary text-xs">Roll number</p><p className="text-text-primary">{selected.roll_number || "—"}</p></div>
+                  <div><p className="text-text-tertiary text-xs">Phone</p><p className="text-text-primary">{selected.phone || "—"}</p></div>
                   <div><p className="text-text-tertiary text-xs">Year / Semester</p><p className="text-text-primary">{selected.year_or_semester || "—"}</p></div>
+                  <div><p className="text-text-tertiary text-xs">Section</p><p className="text-text-primary">{selected.section || "—"}</p></div>
                   <div className="col-span-2"><p className="text-text-tertiary text-xs">Department</p><p className="text-text-primary">{selected.department || "—"}</p></div>
                   <div><p className="text-text-tertiary text-xs">College email</p><p className="text-text-primary break-all">{selected.college_email || "—"}</p></div>
                   <div><p className="text-text-tertiary text-xs">Accessible email</p><p className="text-text-primary break-all">{selected.accessible_email}</p></div>
+                  <div><p className="text-text-tertiary text-xs">Matched whitelist</p><p className="text-text-primary break-all">{selected.full_name ? "✅ Auto-matched" : "No whitelist match"}</p></div>
                 </div>
               </Card>
 
               {/* Reason */}
-              <Card>
-                <p className="text-xs font-semibold text-text-tertiary uppercase tracking-wider mb-2">Reason</p>
-                <p className="text-sm text-text-primary mb-1">{REASON_LABELS[selected.request_reason] || selected.request_reason}</p>
-                {selected.reason_detail && (
-                  <p className="text-sm text-text-secondary leading-relaxed">{selected.reason_detail}</p>
-                )}
-              </Card>
+              {selected.request_reason !== "other" || selected.reason_detail ? (
+                <Card>
+                  <p className="text-xs font-semibold text-text-tertiary uppercase tracking-wider mb-2">Reason</p>
+                  <p className="text-sm text-text-primary mb-1">{REASON_LABELS[selected.request_reason] || selected.request_reason}</p>
+                  {selected.reason_detail && (
+                    <p className="text-sm text-text-secondary leading-relaxed">{selected.reason_detail}</p>
+                  )}
+                </Card>
+              ) : null}
 
               {/* Status / review info */}
               {selected.status !== "pending" && (
@@ -384,8 +391,8 @@ export default function AdminAccessRequestsPage() {
                     </Button>
                   </div>
                   <p className="text-xs text-text-tertiary">
-                    Approving adds this student to the authorized list, activates the account, and grants
-                    voting eligibility. The student can then sign in with Google using{" "}
+                    Approving verifies this student, adds them to the authorized list, and (when the
+                    registered college email matches) switches their login to{" "}
                     <strong>{selected.accessible_email}</strong>.
                   </p>
                 </>
