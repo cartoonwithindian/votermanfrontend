@@ -443,7 +443,7 @@ export default function CandidateStatusPage() {
               </li>
             ))}
           </ul>
-          <Link href="/student/guidelines">
+          <Link href="/candidate/guidelines">
             <Button variant="secondary" size="sm" className="gap-1.5">
               <ArrowRight className="w-3.5 h-3.5" />
               View Full Guidelines

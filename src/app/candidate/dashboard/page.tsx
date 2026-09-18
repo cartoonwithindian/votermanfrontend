@@ -302,7 +302,7 @@ export default function CandidateDashboardPage() {
                 Do not upload offensive content.
               </li>
             </ul>
-            <Link href="/student/guidelines">
+            <Link href="/candidate/guidelines">
               <Button variant="outline" size="sm" className="w-full">
                 <BookOpen className="w-4 h-4" />
                 View Full Guidelines
@@ -320,7 +320,7 @@ export default function CandidateDashboardPage() {
               Contact election administration if you have questions about your candidate profile,
               application status, or election rules.
             </p>
-            <Link href="/student/help">
+            <Link href="/candidate/help">
               <Button variant="primary" size="md" className="w-full">
                 Help &amp; Support
                 <ArrowRight className="w-4 h-4" />

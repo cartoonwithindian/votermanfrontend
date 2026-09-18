@@ -15,20 +15,35 @@ export interface CandidateLayoutProps {
   candidateId?: string;
 }
 
+// Everything behind these is locked until the application is approved.
 const PROTECTED_ROUTES = [
   "/candidate/dashboard",
   "/candidate/profile",
   "/candidate/campaign",
   "/candidate/manifesto",
-  "/candidate/preview",
   "/candidate/settings",
+];
+
+// Read-only routes a pending applicant may still visit: the waiting room
+// (status/apply), the shared guidelines & help pages, and their own
+// submitted profile preview. Stays inside the candidate portal.
+const READ_ONLY_ROUTES = [
+  "/candidate/status",
+  "/candidate/apply",
+  "/candidate/guidelines",
+  "/candidate/help",
+  "/candidate/preview",
 ];
 
 function canAccessRoute(pathname: string, status: ApplicationStatus): boolean {
   if (status === "approved") return true;
 
-  if (pathname.startsWith("/candidate/status")) return true;
-  if (pathname.startsWith("/candidate/apply")) return true;
+  if (READ_ONLY_ROUTES.some((r) => pathname.startsWith(r))) {
+    if (pathname.startsWith("/candidate/preview") && status === "draft") {
+      return false;
+    }
+    return true;
+  }
 
   return !PROTECTED_ROUTES.some((r) => pathname.startsWith(r));
 }
@@ -82,19 +97,19 @@ export const CandidateLayout: React.FC<CandidateLayoutProps> = ({
 
       // Role guard: keep users inside the candidate portal. ADMIN may browse
       // it, CAD goes to their own dashboard. A STUDENT is a pending applicant
-      // (CANDIDATE is earned on approval) — confine them to the waiting room
-      // instead of ejecting them to /student/dashboard (this used to send
+      // (CANDIDATE is earned on approval) — confine them to the read-only
+      // routes (waiting room, guidelines/help, own profile preview) instead
+      // of ejecting them to /student/dashboard (this used to send
       // profile/dashboard clicks out of the candidate portal).
       const normalizedRole = String(userRole || "").toUpperCase();
-      const isWaitingRoom =
-        pathname.startsWith("/candidate/apply") || pathname.startsWith("/candidate/status");
+      const isReadOnlyRoute = READ_ONLY_ROUTES.some((r) => pathname.startsWith(r));
       const isApprovedCandidate = currentStatus === "approved";
       if (normalizedRole === "CAD") {
         router.replace("/cad/dashboard");
         return;
       }
       if (normalizedRole && normalizedRole !== "CANDIDATE" && normalizedRole !== "ADMIN") {
-        if (!isApprovedCandidate && !isWaitingRoom) {
+        if (!isApprovedCandidate && !isReadOnlyRoute) {
           router.replace("/candidate/status");
           return;
         }

@@ -52,7 +52,7 @@ const MENU_ITEMS = [
   { label: "Application Status", href: "/candidate/status", icon: BarChart3 },
   { label: "Apply as Candidate", href: "/candidate/apply", icon: Send },
   { label: "Preview Profile", href: "/candidate/preview", icon: Eye },
-  { label: "Help & Support", href: "/student/help", icon: HelpCircle },
+  { label: "Help & Support", href: "/candidate/help", icon: HelpCircle },
   { label: "Settings", href: "/candidate/settings", icon: Settings },
 ];
 

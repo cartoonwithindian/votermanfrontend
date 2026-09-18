@@ -72,7 +72,7 @@ export const CadLayout: React.FC<{ children: React.ReactNode }> = ({ children })
             The CAD portal is restricted to election monitors. Your account role is {role || "unknown"}.
           </p>
           <Link
-            href="/student/login"
+            href="/login/cad"
             className="inline-block mt-6 px-5 py-2.5 rounded-xl bg-primary-600 text-white text-sm font-semibold hover:bg-primary-700 transition-colors"
           >
             Back to Login
