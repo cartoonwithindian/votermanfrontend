@@ -7,7 +7,6 @@ import { CandidateNavbar } from "./CandidateNavbar";
 import { MobileNav } from "@/components/layout/MobileNav";
 import { getMyApplication } from "@/lib/candidate-api";
 import { getMe } from "@/lib/api/v1";
-import { getDashboardRoute } from "@/lib/dashboard-route";
 import type { ApplicationStatus } from "@/lib/candidate-dashboard-data";
 
 export interface CandidateLayoutProps {
@@ -81,16 +80,22 @@ export const CandidateLayout: React.FC<CandidateLayoutProps> = ({
       if (!alive) return;
       setStatus(currentStatus);
 
-      // Role guard: CANDIDATE and ADMIN may access the whole candidate portal.
-      // A STUDENT coming through the candidate toggle is a pending applicant
-      // (CANDIDATE is earned on approval) — let them wait on the apply/status
-      // pages instead of bouncing them to the student dashboard.
+      // Role guard: keep users inside the candidate portal. ADMIN may browse
+      // it, CAD goes to their own dashboard. A STUDENT is a pending applicant
+      // (CANDIDATE is earned on approval) — confine them to the waiting room
+      // instead of ejecting them to /student/dashboard (this used to send
+      // profile/dashboard clicks out of the candidate portal).
       const normalizedRole = String(userRole || "").toUpperCase();
       const isWaitingRoom =
         pathname.startsWith("/candidate/apply") || pathname.startsWith("/candidate/status");
+      const isApprovedCandidate = currentStatus === "approved";
+      if (normalizedRole === "CAD") {
+        router.replace("/cad/dashboard");
+        return;
+      }
       if (normalizedRole && normalizedRole !== "CANDIDATE" && normalizedRole !== "ADMIN") {
-        if (!(normalizedRole === "STUDENT" && isWaitingRoom)) {
-          router.replace(getDashboardRoute(userRole));
+        if (!isApprovedCandidate && !isWaitingRoom) {
+          router.replace("/candidate/status");
           return;
         }
       }
