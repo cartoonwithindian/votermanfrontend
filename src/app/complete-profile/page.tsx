@@ -161,13 +161,22 @@ function CompleteProfileForm() {
           <Input id="profile-name" label="Full Name" type="text" value={name} disabled placeholder="Your name" />
           <Input id="profile-email" label="Email" type="email" value={email} disabled placeholder="Your email" />
 
-          {/* Class pre-filled from whitelist (read-only) */}
-          <div className="p-3 rounded-xl bg-bg-tertiary border border-border">
-            <p className="text-xs font-medium text-text-secondary">Your Class (from whitelist)</p>
-            <p className="text-sm font-semibold text-text-primary mt-1">
-              {[course, batch.year, batch.section ? `Section ${batch.section}` : null].filter(Boolean).join(" • ") || "—"}
-            </p>
-            <p className="text-xs text-text-muted mt-1">Contact support team if this is incorrect.</p>
+          {/* Course & Sem pre-filled from whitelist (read-only) */}
+          <div className="grid grid-cols-2 gap-3 p-3 rounded-xl bg-bg-tertiary border border-border">
+            <div>
+              <p className="text-xs font-medium text-text-secondary">Course</p>
+              <p className="text-sm font-semibold text-text-primary mt-1">{course || "—"}</p>
+            </div>
+            <div>
+              <p className="text-xs font-medium text-text-secondary">Semester</p>
+              <p className="text-sm font-semibold text-text-primary mt-1">{batch.year || "—"}</p>
+            </div>
+            {batch.section ? (
+              <div className="col-span-2">
+                <p className="text-xs font-medium text-text-secondary">Section</p>
+                <p className="text-sm font-semibold text-text-primary mt-1">{batch.section}</p>
+              </div>
+            ) : null}
           </div>
 
           {batch.year === "1st Year" || batch.year === "1 Sem" ? (
