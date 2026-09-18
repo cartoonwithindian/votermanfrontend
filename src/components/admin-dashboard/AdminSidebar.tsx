@@ -43,6 +43,7 @@ const MENU_SECTIONS = [
     items: [
       { label: "Candidates", href: "/admin/candidates", icon: Users },
       { label: "Students", href: "/admin/students", icon: UserCheck },
+      { label: "Whitelist", href: "/admin/whitelist", icon: Shield },
       { label: "Access Requests", href: "/admin/access-requests", icon: UserPlus },
     ],
   },

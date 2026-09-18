@@ -221,6 +221,26 @@ export const adminApi = {
   updatePosition: (id: number | string, body: { name?: string; description?: string; display_order?: number }) =>
     api.patch(`/admin/positions/${id}`, body),
 
+  // ---- Whitelist (admin-only, seeded from Excel: only these emails can register) ----
+  getWhitelist: (params?: { search?: string; department?: string; year_or_semester?: string; section?: string; is_registered?: string; page?: number; limit?: number }) => {
+    const q = new URLSearchParams();
+    if (params?.search) q.set('search', params.search);
+    if (params?.department) q.set('department', params.department);
+    if (params?.year_or_semester) q.set('year_or_semester', params.year_or_semester);
+    if (params?.section) q.set('section', params.section);
+    if (params?.is_registered) q.set('is_registered', params.is_registered);
+    if (params?.page) q.set('page', String(params.page));
+    if (params?.limit) q.set('limit', String(params.limit));
+    const qs = q.toString();
+    return api.get<{ data: { whitelist: AdminStudentRecord[] & { is_registered?: boolean; official_email?: string; current_login_email?: string }[]; pagination: { page:number; limit:number; total:number; totalPages:number } } }>(`/admin/whitelist${qs ? '?' + qs : ''}`);
+  },
+  getWhitelistEntry: (id: number) => api.get<{ data: AdminStudentRecord }>(`/admin/whitelist/${id}`),
+  createWhitelist: (body: { name: string; email: string; department?: string; year_or_semester?: string; section?: string }) =>
+    api.post<{ data: AdminStudentRecord }>(`/admin/whitelist`, body),
+  updateWhitelist: (id: number, body: { email?: string; name?: string; department?: string; year_or_semester?: string; section?: string | null; is_active?: boolean }) =>
+    api.patch<{ data: AdminStudentRecord }>(`/admin/whitelist/${id}`, body),
+  deleteWhitelist: (id: number) => api.delete(`/admin/whitelist/${id}`),
+
   // ---- Class Representative constituencies (real /constituencies + /admin/constituencies) ----
   getConstituencies: (electionId: number | string) =>
     api.get<{ data: AdminConstituencyRecord[] }>(`/constituencies?election_id=${electionId}&active_only=false`),
