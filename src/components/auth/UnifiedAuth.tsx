@@ -6,6 +6,9 @@ import { useAuth, useSignIn, useSignUp } from "@clerk/nextjs";
 import { AuthLayout } from "@/components/auth/AuthLayout";
 import { AuthCard } from "@/components/auth/AuthCard";
 import { AuthHeader } from "@/components/auth/AuthHeader";
+import { RoleSelector } from "@/components/auth/RoleSelector";
+import { ClerkOtpLogin } from "@/components/auth/ClerkOtpLogin";
+import { ClerkRegisterPanel } from "@/components/auth/ClerkRegisterPanel";
 import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
 import { cn } from "@/lib/utils";
@@ -122,6 +125,7 @@ export function UnifiedAuthPage({
   const [mode, setMode] = useState<Mode>("login");
 
   // Sign-in state
+  const [loginMethod, setLoginMethod] = useState<"password" | "code">("password");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isLoggingIn, setIsLoggingIn] = useState(false);
@@ -524,6 +528,24 @@ export function UnifiedAuthPage({
         )}
 
         {mode === "login" ? (
+          loginMethod === "code" && CLERK_ENABLED ? (
+            <div className="space-y-4">
+              <ClerkOtpLogin
+                role={portal}
+                portalLabel={portal === "candidate" ? "Candidate" : "Student"}
+              />
+              <button
+                type="button"
+                onClick={() => {
+                  setLoginMethod("password");
+                  setError("");
+                }}
+                className="w-full text-center text-xs text-text-muted hover:text-text-secondary font-medium pt-1"
+              >
+                Use email &amp; password instead
+              </button>
+            </div>
+          ) : (
           <div className="space-y-4">
             <Input
               id="auth-email"
@@ -566,7 +588,26 @@ export function UnifiedAuthPage({
                 Can&apos;t access your registered email?
               </a>
             </div>
+            {CLERK_ENABLED && (
+              <button
+                type="button"
+                onClick={() => {
+                  setLoginMethod("code");
+                  setError("");
+                }}
+                className="w-full text-center text-xs text-primary-600 hover:text-primary-700 font-medium pt-1"
+              >
+                Can&apos;t remember your password? Sign in with a one-time code
+              </button>
+            )}
           </div>
+          )
+        ) : CLERK_ENABLED ? (
+          <ClerkRegisterPanel
+            portal={portal}
+            initialEmail={regEmail}
+            onGoLogin={() => switchMode("login")}
+          />
         ) : regStage === "email" ? (
           <div className="space-y-4">
             <Input
