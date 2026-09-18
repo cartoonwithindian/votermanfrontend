@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, Suspense } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { GraduationCap, Loader2 } from "lucide-react";
 import { AuthLayout } from "@/components/auth/AuthLayout";
@@ -8,10 +8,7 @@ import { AuthCard } from "@/components/auth/AuthCard";
 import { AuthHeader } from "@/components/auth/AuthHeader";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
-import { CourseSelect } from "@/components/ui/CourseSelect";
-import { BatchSelect } from "@/components/ui/BatchSelect";
 import { api, ApiError } from "@/lib/api/client";
-import type { Course, Section, Year } from "@/lib/class-data";
 
 const DASHBOARDS: Record<string, string> = {
   student: "/student/dashboard",
@@ -23,32 +20,63 @@ function CompleteProfileForm() {
   const params = useSearchParams();
 
   const nextRaw = params.get("next") || "";
+  // Role-aware next: student -> vote and finish, candidate -> form filling
+  const portalHint = (params.get("portal") || params.get("role") || "").toLowerCase();
+  const isCandidatePortal = portalHint === "candidate";
+  const fallbackNext = isCandidatePortal ? "/candidate/apply" : DASHBOARDS.student;
   const next =
     nextRaw.startsWith("/") && !nextRaw.startsWith("//")
       ? nextRaw
-      : DASHBOARDS.student;
+      : fallbackNext;
 
   const [rollNumber, setRollNumber] = useState("");
   const [mobileNumber, setMobileNumber] = useState("");
-  const [course, setCourse] = useState<"" | Course>("");
-  const [batch, setBatch] = useState<{ section: Section; year: Year | "" }>({ section: "", year: "" });
+  // Course/batch now come from whitelist (pre-filled), not user-selected
+  const [course, setCourse] = useState<string>("");
+  const [batch, setBatch] = useState<{ section: string; year: string }>({ section: "", year: "" });
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [role, setRole] = useState<string>("STUDENT");
+  const [loadingProfile, setLoadingProfile] = useState(true);
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
+
+  // Fetch whitelisted profile (name/email/class pre-filled)
+  useEffect(() => {
+    const load = async () => {
+      try {
+        const res: any = await api.get("/students/profile");
+        const data = res?.data ?? res;
+        setName(data?.name || "");
+        setEmail(data?.email || data?.official_email || data?.current_login_email || "");
+        setCourse(data?.department || "");
+        setBatch({ section: data?.section || "", year: data?.year || data?.year_or_semester || "" });
+        setRole(String(data?.role || "STUDENT").toUpperCase());
+        // If profile already completed (roll/mobile set), skip this page
+        if (data?.enrollmentNumber || data?.phone) {
+          router.replace(next);
+        }
+      } catch (e) {
+        // If unauthenticated, let the api client redirect; otherwise show error
+        console.error("load profile failed", e);
+      } finally {
+        setLoadingProfile(false);
+      }
+    };
+    load();
+  }, [router, next]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
 
-    if (!course) {
-      setError("Please select your course.");
-      return;
-    }
-    if (!batch.year) {
-      setError("Please select your batch.");
+    // Course/batch are pre-filled from whitelist; just validate presence
+    if (!course || !batch.year) {
+      setError("Your class could not be determined. Please contact the support team.");
       return;
     }
 
-    const isFirstYear = batch.year === "1st Year";
+    const isFirstYear = batch.year === "1st Year" || batch.year === "1 Sem";
     const payload: {
       rollNumber?: string;
       mobileNumber?: string;
@@ -80,7 +108,12 @@ function CompleteProfileForm() {
     setSaving(true);
     try {
       await api.post("/auth/profile", payload);
-      router.replace(next);
+      // Role-aware redirect: student -> vote and finish, candidate -> form filling
+      if (String(role).toUpperCase() === "CANDIDATE" || isCandidatePortal) {
+        router.replace("/candidate/apply");
+      } else {
+        router.replace(next);
+      }
     } catch (err) {
       setError(
         err instanceof ApiError
@@ -91,8 +124,18 @@ function CompleteProfileForm() {
     }
   };
 
-  const selectClass =
-    "w-full px-4 py-2.5 text-sm bg-white dark:bg-[#252540] border border-border rounded-xl text-text-primary focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500";
+  if (loadingProfile) {
+    return (
+      <AuthLayout>
+        <AuthCard>
+          <div className="text-center py-8">
+            <Loader2 className="w-6 h-6 animate-spin text-primary-600 mx-auto mb-3" />
+            <p className="text-sm text-text-secondary">Loading your profile…</p>
+          </div>
+        </AuthCard>
+      </AuthLayout>
+    );
+  }
 
   return (
     <AuthLayout>
@@ -103,7 +146,7 @@ function CompleteProfileForm() {
           </div>
           <AuthHeader
             title="Complete Your Profile"
-            subtitle="One-time step — your course and batch, plus your roll number (2nd/3rd year) or mobile number (1st year)"
+            subtitle={String(role).toUpperCase() === "CANDIDATE" ? "One-time step — confirm your details to start your candidacy" : "One-time step — confirm your mobile/roll to start voting"}
           />
         </div>
 
@@ -114,35 +157,20 @@ function CompleteProfileForm() {
         )}
 
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="space-y-1.5">
-            <label htmlFor="profile-course" className="text-xs font-medium text-text-secondary">
-              Course
-            </label>
-            <CourseSelect
-              id="profile-course"
-              value={course}
-              onChange={(c) => {
-                setCourse(c);
-                setBatch({ section: "", year: "" });
-              }}
-              required
-            />
+          {/* Name & Email pre-filled from whitelist (read-only) */}
+          <Input id="profile-name" label="Full Name" type="text" value={name} disabled placeholder="Your name" />
+          <Input id="profile-email" label="Email" type="email" value={email} disabled placeholder="Your email" />
+
+          {/* Class pre-filled from whitelist (read-only) */}
+          <div className="p-3 rounded-xl bg-bg-tertiary border border-border">
+            <p className="text-xs font-medium text-text-secondary">Your Class (from whitelist)</p>
+            <p className="text-sm font-semibold text-text-primary mt-1">
+              {[course, batch.year, batch.section ? `Section ${batch.section}` : null].filter(Boolean).join(" • ") || "—"}
+            </p>
+            <p className="text-xs text-text-muted mt-1">Contact support team if this is incorrect.</p>
           </div>
 
-          <div className="space-y-1.5">
-            <label htmlFor="profile-batch" className="text-xs font-medium text-text-secondary">
-              Batch
-            </label>
-            <BatchSelect
-              id="profile-batch"
-              course={course}
-              value={batch}
-              onChange={(b) => setBatch(b)}
-              required
-            />
-          </div>
-
-          {batch.year === "1st Year" ? (
+          {batch.year === "1st Year" || batch.year === "1 Sem" ? (
             <Input
               id="profile-phone"
               label="Mobile / Phone Number"
