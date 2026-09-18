@@ -291,6 +291,9 @@ export default function CandidateApplyPage() {
 
   const validateStep3 = (): boolean => {
     const newErrors: FormErrors = {};
+    if (!formData.photo) {
+      newErrors.photo = "Profile photo is required";
+    }
     if (!formData.bio.trim()) {
       newErrors.bio = "Bio is required";
     } else if (formData.bio.length > 500) {
@@ -836,7 +839,7 @@ export default function CandidateApplyPage() {
             {/* Photo Upload */}
             <div>
               <label className="block text-xs font-medium text-text-secondary mb-2">
-                Profile Photo
+                Profile Photo <span className="text-error-500">*</span>
               </label>
               <div className="flex items-center gap-4">
                 <div className="relative group">
