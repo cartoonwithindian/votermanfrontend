@@ -38,9 +38,6 @@ export function ClerkRegisterPanel({ portal, initialEmail = "", onGoLogin }: Cle
 
   const [stage, setStage] = useState<Stage>("email");
   const [email, setEmail] = useState(initialEmail);
-  const [fullName, setFullName] = useState("");
-  const [roll, setRoll] = useState("");
-  const [mobile, setMobile] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [code, setCode] = useState("");
@@ -99,14 +96,6 @@ export function ClerkRegisterPanel({ portal, initialEmail = "", onGoLogin }: Cle
     }
     if (!password || password.length < 12) {
       setError("Password must be at least 12 characters.");
-      return;
-    }
-    if (portal === "student" && !roll.trim()) {
-      setError("Enter your roll / enrollment number to register as a student.");
-      return;
-    }
-    if (!mobile || mobile.replace(/\D/g, "").length !== 10) {
-      setError("Mobile number must be 10 digits.");
       return;
     }
     if (!signUp) {
@@ -199,9 +188,6 @@ export function ClerkRegisterPanel({ portal, initialEmail = "", onGoLogin }: Cle
           "X-CSRF-Token": csrfToken,
         },
         body: JSON.stringify({
-          fullName: fullName.trim(),
-          rollNumber: roll.trim(),
-          mobileNumber: mobile.trim(),
           password,
           role: portal.toUpperCase(),
         }),
@@ -225,7 +211,7 @@ export function ClerkRegisterPanel({ portal, initialEmail = "", onGoLogin }: Cle
           ? (effectiveRole.toLowerCase() as UserRole)
           : portal;
       if (account) {
-        setAuthCookie(cookieRole, account.name || fullName.trim(), account.email || email.trim().toLowerCase());
+        setAuthCookie(cookieRole, account.name || email.split("@")[0], account.email || email.trim().toLowerCase());
       }
       go(destinationForPortal(portal, account?.role));
     } catch (err) {
@@ -276,33 +262,6 @@ export function ClerkRegisterPanel({ portal, initialEmail = "", onGoLogin }: Cle
             placeholder="you@example.com"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-          />
-          <Input
-            id="reg-full-name"
-            label="Full name"
-            type="text"
-            autoComplete="name"
-            placeholder="As written on your student record"
-            value={fullName}
-            onChange={(e) => setFullName(e.target.value)}
-          />
-          <Input
-            id="reg-roll"
-            label={portal === "student" ? "Roll / enrollment number" : "Roll / enrollment number (optional)"}
-            type="text"
-            autoCapitalize="characters"
-            placeholder="e.g. 21CS01"
-            value={roll}
-            onChange={(e) => setRoll(e.target.value)}
-          />
-          <Input
-            id="reg-mobile"
-            label="Mobile number"
-            type="tel"
-            autoComplete="tel"
-            placeholder="10-digit mobile number"
-            value={mobile}
-            onChange={(e) => setMobile(e.target.value.replace(/[^0-9]/g, "").slice(0, 10))}
           />
           <Input
             id="reg-password"
