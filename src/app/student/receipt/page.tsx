@@ -157,10 +157,11 @@ export default function ReceiptPage() {
         <div className="max-w-4xl mx-auto space-y-6">
           {!state.current ? (
             <>
-              <ReceiptHeader electionName="Student Council Election 2026" />
-              <div className="bg-white rounded-2xl p-12 border border-border shadow-sm text-center">
-                <p className="text-text-secondary text-sm">
-                  No receipt available. Cast your vote to receive a receipt.
+              <div className="text-center space-y-4">
+                <h1 className="text-2xl font-bold text-text-primary">Vote Receipt</h1>
+                <p className="text-text-secondary text-sm max-w-xl mx-auto">
+                  You haven&apos;t cast a vote in any election yet, so there is no
+                  receipt to show. Cast your vote to receive a receipt.
                 </p>
               </div>
             </>
