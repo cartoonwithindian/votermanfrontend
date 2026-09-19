@@ -14,6 +14,8 @@ import { BatchSelect } from "@/components/ui/BatchSelect";
 import type { Section, Year } from "@/lib/class-data";
 
 const DEPARTMENTS = ["All", ...COURSES] as const;
+const SEM_OPTIONS = ["All", "1 Sem", "3 Sem", "5 Sem"] as const;
+const SECTION_OPTIONS = ["All", "A1", "A2", "A3"] as const;
 const ROLES = ["All", "STUDENT", "CANDIDATE", "CAD", "ADMIN"] as const;
 
 type UiStudent = AdminStudentRecord & {
@@ -43,6 +45,8 @@ export default function StudentsPage() {
   const [error, setError] = useState("");
   const [search, setSearch] = useState("");
   const [department, setDepartment] = useState<string>("All");
+  const [sem, setSem] = useState<string>("All");
+  const [section, setSection] = useState<string>("All");
   const [role, setRole] = useState<string>("All");
   const [activeFilter, setActiveFilter] = useState<string>("All");
   const [selectedStudent, setSelectedStudent] = useState<UiStudent | null>(null);
@@ -177,14 +181,16 @@ export default function StudentsPage() {
         !s.email?.toLowerCase().includes(q)
       )
         return false;
-      if (department !== "All" && (s as { department?: string }).department !== department)
-        return false;
+      const sDept = normalizeCourse((s as { department?: string }).department) || (s as { department?: string }).department || "";
+      if (department !== "All" && normalizeCourse(department) !== normalizeCourse(sDept)) return false;
+      if (sem !== "All" && (s as { year_or_semester?: string }).year_or_semester !== sem) return false;
+      if (section !== "All" && (s as { section?: string }).section !== section) return false;
       if (role !== "All" && s.role !== role) return false;
       if (activeFilter === "Active" && !s.is_active) return false;
       if (activeFilter === "Inactive" && s.is_active) return false;
       return true;
     });
-  }, [students, search, department, role, activeFilter]);
+  }, [students, search, department, sem, section, role, activeFilter]);
 
   return (
     <AdminLayout>
@@ -222,8 +228,8 @@ export default function StudentsPage() {
         )}
 
         <Card className="p-4">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-            <div className="relative lg:col-span-2">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3">
+            <div className="relative lg:col-span-1 xl:col-span-2">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text-muted" />
               <input
                 type="text"
@@ -233,6 +239,39 @@ export default function StudentsPage() {
                 className="w-full pl-9 pr-4 py-2.5 text-sm bg-white border border-border rounded-xl text-text-primary placeholder:text-text-muted focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all"
               />
             </div>
+            <select
+              value={department}
+              onChange={(e) => setDepartment(e.target.value)}
+              className="px-3 py-2.5 text-sm bg-white border border-border rounded-xl text-text-primary focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all cursor-pointer"
+            >
+              {DEPARTMENTS.map((d) => (
+                <option key={d} value={d}>
+                  {d === "All" ? "All Courses" : d}
+                </option>
+              ))}
+            </select>
+            <select
+              value={sem}
+              onChange={(e) => setSem(e.target.value)}
+              className="px-3 py-2.5 text-sm bg-white border border-border rounded-xl text-text-primary focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all cursor-pointer"
+            >
+              {SEM_OPTIONS.map((y) => (
+                <option key={y} value={y}>
+                  {y === "All" ? "All Batches" : y}
+                </option>
+              ))}
+            </select>
+            <select
+              value={section}
+              onChange={(e) => setSection(e.target.value)}
+              className="px-3 py-2.5 text-sm bg-white border border-border rounded-xl text-text-primary focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all cursor-pointer"
+            >
+              {SECTION_OPTIONS.map((s) => (
+                <option key={s} value={s}>
+                  {s === "All" ? "All Sections" : `Section ${s}`}
+                </option>
+              ))}
+            </select>
             <select
               value={role}
               onChange={(e) => setRole(e.target.value)}
@@ -277,7 +316,7 @@ export default function StudentsPage() {
                     <tr className="border-b border-border">
                       <th className="text-left px-4 py-3 font-semibold text-text-secondary">Student ID</th>
                       <th className="text-left px-4 py-3 font-semibold text-text-secondary">Name</th>
-                      <th className="text-left px-4 py-3 font-semibold text-text-secondary">Email</th>
+                      <th className="text-left px-4 py-3 font-semibold text-text-secondary">Class</th>
                       <th className="text-left px-4 py-3 font-semibold text-text-secondary">Role</th>
                       <th className="text-left px-4 py-3 font-semibold text-text-secondary">Account</th>
                       <th className="text-left px-4 py-3 font-semibold text-text-secondary">Voting</th>
@@ -292,7 +331,9 @@ export default function StudentsPage() {
                       >
                         <td className="px-4 py-3 font-mono text-xs text-text-secondary">{student.displayId}</td>
                         <td className="px-4 py-3 font-medium text-text-primary">{student.name || "—"}</td>
-                        <td className="px-4 py-3 text-text-secondary">{student.email || "—"}</td>
+                        <td className="px-4 py-3 text-text-secondary">
+                          {[normalizeCourse((student as { department?: string }).department) || (student as { department?: string }).department, (student as { year_or_semester?: string }).year_or_semester, (student as { section?: string }).section].filter(Boolean).join(" / ") || "—"}
+                        </td>
                         <td className="px-4 py-3">
                           <Badge variant={getRoleBadgeVariant(student.role)} size="sm">
                             {student.role}
@@ -334,6 +375,9 @@ export default function StudentsPage() {
                       <p className="font-mono text-xs text-text-muted mb-0.5">{student.displayId}</p>
                       <p className="font-semibold text-text-primary">{student.name || "—"}</p>
                       <p className="text-sm text-text-secondary">{student.email || "—"}</p>
+                      <p className="text-xs text-text-muted mt-1">
+                        {[normalizeCourse((student as { department?: string }).department) || (student as { department?: string }).department, (student as { year_or_semester?: string }).year_or_semester, (student as { section?: string }).section].filter(Boolean).join(" / ") || "—"}
+                      </p>
                     </div>
                     <Button
                       variant="ghost"
