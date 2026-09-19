@@ -21,6 +21,7 @@ import {
   UserPlus,
   Eye,
   Gauge,
+  ClipboardCheck,
 } from "lucide-react";
 
 export interface AdminSidebarProps {
@@ -51,6 +52,7 @@ const MENU_SECTIONS = [
     label: "RESULTS",
     items: [
       { label: "Results", href: "/admin/results", icon: BarChart3 },
+      { label: "Voter Turnout", href: "/admin/voter-turnout", icon: ClipboardCheck },
       { label: "CAD Monitor", href: "/cad/dashboard", icon: Eye },
     ],
   },
