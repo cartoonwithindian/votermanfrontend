@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/Badge";
 import { Modal } from "@/components/ui/Modal";
 import { AdminLayout } from "@/components/admin-dashboard/AdminLayout";
 import { adminApi, type AdminStudentRecord } from "@/lib/api/admin";
+import { api } from "@/lib/api/client";
 import { COURSES, seatLabel, normalizeCourse } from "@/lib/class-data";
 import { CourseSelect } from "@/components/ui/CourseSelect";
 import { BatchSelect } from "@/components/ui/BatchSelect";
@@ -148,7 +149,7 @@ export default function StudentsPage() {
     setLoading(true);
     setError("");
     try {
-      const res = await adminApi.getStudents();
+      const res = await api.get<{ students?: AdminStudentRecord[] } | AdminStudentRecord[]>("/admin/students?limit=5000");
       const rows: AdminStudentRecord[] = Array.isArray(res)
         ? res
         : ((res as { students?: AdminStudentRecord[] }).students as AdminStudentRecord[]) ||
