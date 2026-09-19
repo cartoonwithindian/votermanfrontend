@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { StudentLayout } from "@/components/layout/StudentLayout";
-import { User, BookOpen, Megaphone, Vote, CalendarClock } from "lucide-react";
+import { User, BookOpen, Megaphone, Vote, CalendarClock, FileText } from "lucide-react";
 import {
   getMe,
   listElections,
@@ -217,7 +217,7 @@ export default function StudentDashboardPage() {
           </div>
         )}
 
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <Link href="/student/vote">
             <div className="p-4 rounded-xl bg-white border border-border hover:bg-primary-50 hover:border-primary-200 cursor-pointer transition-colors shadow-sm">
               <div className="w-10 h-10 rounded-xl bg-primary-100 flex items-center justify-center mb-3">
@@ -234,6 +234,15 @@ export default function StudentDashboardPage() {
               </div>
               <h4 className="font-medium text-text-primary">Candidates</h4>
               <p className="text-xs text-text-secondary">View candidates</p>
+            </div>
+          </Link>
+          <Link href="/candidate/login">
+            <div className="p-4 rounded-xl bg-white border border-amber-200 hover:bg-amber-50 hover:border-amber-300 cursor-pointer transition-colors shadow-sm">
+              <div className="w-10 h-10 rounded-xl bg-amber-100 flex items-center justify-center mb-3">
+                <FileText className="w-5 h-5 text-amber-600" />
+              </div>
+              <h4 className="font-medium text-text-primary">Candidate Nomination</h4>
+              <p className="text-xs text-text-secondary">Apply for election</p>
             </div>
           </Link>
         </div>
