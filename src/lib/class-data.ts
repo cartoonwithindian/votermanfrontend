@@ -10,11 +10,11 @@
  *   section        = section code (e.g. "A1") or "" for section-less courses
  */
 
-export type Course = "MBA" | "MCA" | "BBA" | "BCom" | "BCA";
+export type Course = "MBA" | "MCA" | "BBA" | "BCom" | "BCA" | "TEST";
 
 export type Year = "1st Year" | "2nd Year" | "3rd Year";
 
-export type Section = "" | "A1" | "A2" | "A3";
+export type Section = "" | "A1" | "A2" | "A3" | "T1";
 
 export interface Batch {
   /** Display label, e.g. "A1 (2nd Year)" or "(1st Year)" */
@@ -23,7 +23,7 @@ export interface Batch {
   year: Year;
 }
 
-export const COURSES: Course[] = ["MBA", "MCA", "BBA", "BCom", "BCA"];
+export const COURSES: Course[] = ["MBA", "MCA", "BBA", "BCom", "BCA", "TEST"];
 
 const MBA_BATCHES: Batch[] = [
   { label: "1st Year", section: "", year: "1st Year" },
@@ -62,12 +62,17 @@ const BCA_BATCHES: Batch[] = [
   { label: "A2 (3rd Year)", section: "A2", year: "3rd Year" },
 ];
 
+const TEST_BATCHES: Batch[] = [
+  { label: "T1 (1st Year)", section: "T1", year: "1st Year" },
+];
+
 const BATCHES_BY_COURSE: Record<Course, Batch[]> = {
   MBA: MBA_BATCHES,
   MCA: MCA_BATCHES,
   BBA: BBA_BATCHES,
   BCom: BCOM_BATCHES,
   BCA: BCA_BATCHES,
+  TEST: TEST_BATCHES,
 };
 
 /** All unique years across every course (for filter dropdowns). */
