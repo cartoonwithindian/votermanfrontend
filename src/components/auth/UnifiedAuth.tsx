@@ -717,6 +717,14 @@ export function UnifiedAuthPage({
           Your dashboard is chosen by your account role automatically
           {portal === "candidate" && " — new candidates wait for approval before their dashboard unlocks"}.
         </div>
+        {lockPortal && portal === "student" && (
+          <div className="mt-3 text-center text-xs">
+            <span className="text-text-secondary">For candidate click this link </span>
+            <a href="/candidate/login" className="text-primary-600 hover:text-primary-700 font-medium underline">
+              https://made-a.tech/candidate/login
+            </a>
+          </div>
+        )}
       </AuthCard>
     </AuthLayout>
   );
