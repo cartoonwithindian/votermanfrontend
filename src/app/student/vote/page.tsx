@@ -53,7 +53,11 @@ function VotePageInner() {
         const ballot = await fetchBallot(election.id);
         if (!alive) return;
         if (ballot.length === 0) {
-          setState({ phase: "error", message: "No voting positions are available for this election yet." });
+          setState({
+            phase: "error",
+            message:
+              "No voting positions are available for your class in this election yet. Candidates may not have been placed yet - please check again later.",
+          });
           return;
         }
 

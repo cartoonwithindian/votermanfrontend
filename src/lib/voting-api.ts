@@ -90,10 +90,20 @@ export async function listElections(): Promise<ElectionInfo[]> {
   }));
 }
 
-/** Find the election currently accepting votes (status OPEN). */
+/** Find the election currently accepting votes (status OPEN).
+ *  Deterministic: if multiple OPEN elections exist, the most recently
+ *  opened one wins, so a freshly configured ballot is preferred over a
+ *  stale one that has no seats. */
 export async function findOpenElection(): Promise<ElectionInfo | null> {
   const list = await listElections();
-  return list.find((e) => e.status === "OPEN") || null;
+  const open = (list || []).filter((e) => e.status === "OPEN");
+  if (open.length === 0) return null;
+  open.sort((a, b) => {
+    const at = Date.parse(a.startTime || "") || 0;
+    const bt = Date.parse(b.startTime || "") || 0;
+    return bt - at || b.id - a.id;
+  });
+  return open[0] || null;
 }
 
 /**
@@ -108,34 +118,45 @@ export async function fetchBallot(electionId: number): Promise<BallotPosition[]>
   const out: BallotPosition[] = [];
 
   // The student's own CR seat (backend resolves by department/year/section).
-  try {
-    const { constituency } = await api.get<{ constituency: ConstituencyRow | null }>(
-      `/elections/${electionId}/votes/my-constituency`
-    );
-    if (constituency) {
-      const positions = await api.get<PositionRow[]>(`/constituencies/${constituency.id}/positions`);
-      for (const pos of positions || []) {
-        const candidates = await api.get<CandidateRow[]>(`/positions/${pos.id}/candidates`);
-        const mapped: BallotCandidate[] = (candidates || []).map((c) => ({
-          id: Number(c.id),
-          name: c.name || "",
-          description: c.description || "",
-          photo: c.image_url || null,
-        }));
-        if (mapped.length === 0) continue;
-        out.push({
-          id: Number(pos.id),
-          constituencyId: Number(constituency.id),
-          name: pos.name || "",
-          description: pos.description || "",
-          order: Number(pos.display_order) || out.length,
-          candidates: mapped,
-        });
-      }
+  // Real failures (401/403/500/network) must not be swallowed into an
+  // empty ballot - let them propagate so callers can show "sign in
+  // required" or a genuine error instead of a misleading "no positions".
+  const { constituency } = await api.get<{ constituency: ConstituencyRow | null }>(
+    `/elections/${electionId}/votes/my-constituency`
+  );
+
+  if (!constituency) {
+    // Legitimate empty: the student has no class-representative seat in
+    // this election (backend returns 200 {constituency:null}).
+    return out;
+  }
+
+  const positions = await api.get<PositionRow[]>(`/constituencies/${constituency.id}/positions`);
+  for (const pos of positions || []) {
+    if (!pos || !pos.id) continue;
+    let candidates: CandidateRow[];
+    try {
+      candidates = await api.get<CandidateRow[]>(`/positions/${pos.id}/candidates`);
+    } catch (err) {
+      const status = (err as { status?: number })?.status;
+      if (status === 401 || status === 403) throw err;
+      continue; // one broken position must not blank the whole ballot
     }
-  } catch {
-    // Non-fatal: students without a CR seat (or without a section on file)
-    // simply see an empty ballot.
+    const mapped: BallotCandidate[] = (candidates || []).map((c) => ({
+      id: Number(c.id),
+      name: c.name || "",
+      description: c.description || "",
+      photo: c.image_url || null,
+    }));
+    if (mapped.length === 0) continue;
+    out.push({
+      id: Number(pos.id),
+      constituencyId: Number(constituency.id),
+      name: pos.name || "",
+      description: pos.description || "",
+      order: Number(pos.display_order) || out.length,
+      candidates: mapped,
+    });
   }
 
   out.sort((a, b) => a.order - b.order);
