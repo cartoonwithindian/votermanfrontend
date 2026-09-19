@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Scale, CheckCircle2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { listCandidates } from "@/lib/candidates-api";
+import { studentApi, type StudentProfile } from "@/lib/api/students";
 import type { Candidate } from "@/lib/candidate-data";
 
 import { CandidateGrid } from "@/components/candidate/CandidateGrid";
@@ -25,16 +26,39 @@ export default function CandidatePage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // The logged-in student's own class — the candidate list is scoped to this
+  // course / year / section (server-enforced), so only their cohort shows.
+  const [myClass, setMyClass] = useState<Pick<StudentProfile, "department" | "year" | "section"> | null>(null);
+
   const [searchQuery, setSearchQuery] = useState("");
   const [filters, setFilters] = useState({
     gender: "all",
-    department: "all",
-    year: "all",
   });
   const [sortBy, setSortBy] = useState<"name-asc" | "name-desc">("name-asc");
 
   const [comparedIds, setComparedIds] = useState<Set<string>>(new Set());
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+
+  // Load the student's own class for the cohort banner. Non-fatal: the
+  // backend still scopes by the session, this is display-only.
+  useEffect(() => {
+    let cancelled = false;
+    studentApi
+      .getProfile()
+      .then((profile) => {
+        if (!cancelled && profile?.department && profile.year && profile.section) {
+          setMyClass({
+            department: profile.department,
+            year: profile.year,
+            section: profile.section,
+          });
+        }
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   // Load candidates from API
   const loadCandidates = useCallback(async () => {
@@ -49,10 +73,11 @@ export default function CandidatePage() {
       };
       const backendGender = filters.gender !== "all" ? genderMap[filters.gender] || filters.gender : undefined;
 
+      // Only gender is filterable here. The list itself is scoped to the
+      // student's own course / year / section on the server — never sent as
+      // client-chosen filters.
       const data = await listCandidates({
         gender: backendGender,
-        department: filters.department !== "all" ? filters.department : undefined,
-        year: filters.year !== "all" ? filters.year : undefined,
       });
       setCandidates(data);
     } catch (err) {
@@ -109,14 +134,6 @@ export default function CandidatePage() {
       );
     }
 
-    if (filters.department !== "all") {
-      results = results.filter((c) => c.department === filters.department);
-    }
-
-    if (filters.year !== "all") {
-      results = results.filter((c) => c.year === filters.year);
-    }
-
     if (sortBy === "name-asc") {
       results.sort((a, b) => a.name.localeCompare(b.name));
     } else {
@@ -124,7 +141,7 @@ export default function CandidatePage() {
     }
 
     return results;
-  }, [candidates, searchQuery, filters, sortBy]);
+  }, [candidates, searchQuery, sortBy]);
 
   if (loading) {
     return (
@@ -163,6 +180,19 @@ export default function CandidatePage() {
           </div>
         </div>
       </div>
+
+      {myClass && (
+        <div className="border-b border-border shrink-0">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-2.5">
+            <p className="text-sm text-text-secondary">
+              Showing candidates of your class:{" "}
+              <span className="font-medium text-text-primary">
+                {myClass.department} • {myClass.year} • Section {myClass.section}
+              </span>
+            </p>
+          </div>
+        </div>
+      )}
 
       {comparedIds.size > 0 && (
         <div className="bg-primary-50 border-b border-primary-100 px-4 sm:px-6 lg:px-8 py-3">
@@ -248,7 +278,7 @@ export default function CandidatePage() {
                   variant="secondary"
                   onClick={() => {
                     setSearchQuery("");
-                    setFilters({ gender: "all", department: "all", year: "all" });
+                    setFilters({ gender: "all" });
                   }}
                 >
                   Clear Filters

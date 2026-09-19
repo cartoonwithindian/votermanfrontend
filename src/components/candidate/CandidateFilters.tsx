@@ -1,16 +1,9 @@
 "use client";
 
 import React from "react";
-import {
-  type CandidateDepartment,
-  type CandidateYear,
-} from "@/lib/candidate-data";
-import { COURSES, ALL_YEARS } from "@/lib/class-data";
 
 interface Filters {
   gender: string;
-  department: string;
-  year: string;
 }
 
 interface CandidateFiltersProps {
@@ -26,16 +19,6 @@ const genderOptions = [
   { value: "boys", label: "Boys" },
 ];
 
-const departmentOptions = [
-  { value: "all", label: "All Courses" },
-  ...COURSES.map((c) => ({ value: c, label: c })),
-];
-
-const yearOptions = [
-  { value: "all", label: "All Years" },
-  ...ALL_YEARS.map((y) => ({ value: y, label: y })),
-];
-
 export const CandidateFilters: React.FC<CandidateFiltersProps> = ({
   filters,
   onFilterChange,
@@ -46,7 +29,8 @@ export const CandidateFilters: React.FC<CandidateFiltersProps> = ({
 
   return (
     <div className="flex flex-wrap items-end gap-4">
-      {/* Gender filter - replaces Position filter */}
+      {/* Gender filter - candidates are pre-scoped to the student's own
+          course / year / section by the backend; gender is the only filter */}
       <div className="min-w-[140px]">
         <label className="text-[10px] font-medium text-text-secondary uppercase tracking-wider block mb-1">
           Gender
@@ -67,40 +51,6 @@ export const CandidateFilters: React.FC<CandidateFiltersProps> = ({
             </button>
           ))}
         </div>
-      </div>
-
-      <div className="min-w-[140px]">
-        <label className="text-[10px] font-medium text-text-secondary uppercase tracking-wider block mb-1">
-          Course
-        </label>
-        <select
-          value={filters.department}
-          onChange={(e) => handleChange("department", e.target.value)}
-          className="w-full px-3 py-2 rounded-xl border border-border text-sm text-text-primary bg-white focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-        >
-          {departmentOptions.map((option) => (
-            <option key={option.value} value={option.value}>
-              {option.label}
-            </option>
-          ))}
-        </select>
-      </div>
-
-      <div className="min-w-[140px]">
-        <label className="text-[10px] font-medium text-text-secondary uppercase tracking-wider block mb-1">
-          Year
-        </label>
-        <select
-          value={filters.year}
-          onChange={(e) => handleChange("year", e.target.value)}
-          className="w-full px-3 py-2 rounded-xl border border-border text-sm text-text-primary bg-white focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-        >
-          {yearOptions.map((option) => (
-            <option key={option.value} value={option.value}>
-              {option.label}
-            </option>
-          ))}
-        </select>
       </div>
     </div>
   );
