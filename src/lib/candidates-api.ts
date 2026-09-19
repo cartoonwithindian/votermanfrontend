@@ -4,7 +4,7 @@
 // Maps backend rows onto the UI Candidate model used by the candidate pages.
 
 import { api } from "@/lib/api/client";
-import type { Candidate, CandidateGender, CandidatePosition, CandidateDepartment, CandidateYear } from "@/lib/candidate-data";
+import type { Candidate, CandidateGender, CandidatePosition, CandidateDepartment, CandidateYear, ManifestoSection } from "@/lib/candidate-data";
 
 interface CandidateRow {
   id: number;
@@ -15,6 +15,7 @@ interface CandidateRow {
   year: string;
   section: string | null;
   description: string | null;
+  manifesto: string | null;
   image_url: string | null;
   position_id: number;
   position_name: string;
@@ -31,6 +32,7 @@ function initialsOf(name: string): string {
 
 function toCandidate(row: CandidateRow): Candidate {
   const bio = row.description || "";
+  const manifesto = (row.manifesto || "").trim() || bio.trim();
   return {
     id: String(row.id),
     name: row.name || "",
@@ -43,10 +45,25 @@ function toCandidate(row: CandidateRow): Candidate {
     campaignSymbol: "",
     verified: false,
     biography: bio,
-    manifestos: [],
+    // Candidates publish one manifesto. Blobs may contain "## " headings —
+    // split them into sections so the profile page honours the structure.
+    manifestos: manifesto ? buildSections(manifesto) : [],
     profilePhotoUrl: row.image_url || undefined,
     electionName: row.election_name || undefined,
   };
+}
+
+function buildSections(text: string): ManifestoSection[] {
+  const parts = text.split(/(?=^##\s)/m);
+  if (parts.length <= 1) {
+    return [{ title: "Manifesto", content: text.trim() }];
+  }
+  return parts
+    .map((p) => {
+      const m = p.match(/^##\s+(.+?)\s*[\r\n]+([\s\S]*)$/);
+      return m ? { title: m[1].trim(), content: m[2].trim() } : null;
+    })
+    .filter((s): s is ManifestoSection => !!s && !!s.content);
 }
 
 export interface ListCandidatesOptions {
