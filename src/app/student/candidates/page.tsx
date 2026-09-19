@@ -173,7 +173,7 @@ export default function CandidatePage() {
                 Review candidate profiles and manifestos before making your decision.
               </p>
             </div>
-            <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-primary-50 text-sm">
+            <div className="flex flex-wrap items-center gap-x-2 gap-y-1 px-3 py-1.5 rounded-xl bg-primary-50 text-xs sm:text-sm">
               <span className="text-primary-600 font-medium">Student Council Election 2026</span>
               <span className="text-text-secondary">Voting Open</span>
             </div>
@@ -253,12 +253,14 @@ export default function CandidatePage() {
             placeholder="Search candidates..."
           />
 
-          <div className="flex flex-wrap items-end gap-4">
+          <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end sm:gap-4">
             <div className="flex-1 min-w-0">
               <CandidateFilters filters={filters} onFilterChange={setFilters} />
             </div>
-            <CandidateSort sortBy={sortBy} onSortChange={(v) => setSortBy(v as "name-asc" | "name-desc")} />
-            <CandidateCount count={filteredCandidates.length} />
+            <div className="flex items-center justify-between gap-3 w-full sm:w-auto sm:justify-start sm:shrink-0">
+              <CandidateSort sortBy={sortBy} onSortChange={(v) => setSortBy(v as "name-asc" | "name-desc")} />
+              <CandidateCount count={filteredCandidates.length} />
+            </div>
           </div>
 
           {filteredCandidates.length > 0 ? (
