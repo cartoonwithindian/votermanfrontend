@@ -90,7 +90,6 @@ export interface AdminElectionRecord {
 
 export interface AdminPositionRecord {
   id: number;
-  club_id: number | null;
   constituency_id: number | null;
   name: string;
   description: string | null;

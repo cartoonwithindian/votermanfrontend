@@ -18,12 +18,6 @@ export interface ResultsPosition {
   candidates: ResultsCandidate[];
 }
 
-export interface ResultsClub {
-  clubId: number;
-  clubName: string;
-  positions: ResultsPosition[];
-}
-
 export interface ResultsConstituency {
   constituencyId: number;
   constituencyName: string;
@@ -38,7 +32,6 @@ export interface ElectionResultsResponse {
   totalEligible: number;
   totalVotes: number;
   participation: number;
-  clubs: ResultsClub[];
   constituencies: ResultsConstituency[];
 }
 
@@ -155,9 +148,6 @@ export function mapResults(data: ElectionResultsResponse): MappedElectionResults
     }
   };
 
-  for (const club of data.clubs) {
-    appendScope(undefined, club.positions);
-  }
   for (const constituency of data.constituencies) {
     appendScope(constituency.constituencyName, constituency.positions);
   }

@@ -151,10 +151,6 @@ class ApiClient {
     return this.get('/admin/positions');
   }
 
-  async getAdminClubs() {
-    return this.get('/admin/clubs');
-  }
-
   async getAdminAnnouncements() {
     return this.get('/admin/announcements');
   }

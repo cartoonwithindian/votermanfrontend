@@ -14,9 +14,9 @@ interface ResultsFull {
   ballots_submitted: number;
   participation_rate: number;
   results_published: boolean;
-  clubs: Array<{
-    club_id: number;
-    club_name: string;
+  constituencies: Array<{
+    constituency_id: number;
+    constituency_name: string;
     positions: Array<{
       position_id: number;
       position_name: string;
@@ -160,7 +160,7 @@ export default function CadResultsPage() {
                 </Card>
               </div>
 
-              {results.clubs.length === 0 ? (
+              {results.constituencies.length === 0 ? (
                 <Card>
                   <div className="flex flex-col items-center justify-center py-12">
                     <Inbox className="h-10 w-10 text-text-tertiary mb-3" />
@@ -168,11 +168,11 @@ export default function CadResultsPage() {
                   </div>
                 </Card>
               ) : (
-                results.clubs.map((club) => (
-                  <Card key={club.club_id} className="p-6">
-                    <h2 className="font-semibold text-text-primary mb-4">{club.club_name}</h2>
+                results.constituencies.map((constituency) => (
+                  <Card key={constituency.constituency_id} className="p-6">
+                    <h2 className="font-semibold text-text-primary mb-4">{constituency.constituency_name}</h2>
                     <div className="space-y-5">
-                      {club.positions.map((pos) => (
+                      {constituency.positions.map((pos) => (
                         <div key={pos.position_id}>
                           <p className="text-sm font-medium text-text-secondary mb-2">{pos.position_name}</p>
                           <div className="space-y-2">

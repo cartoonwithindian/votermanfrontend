@@ -21,9 +21,7 @@ export interface VotingPosition {
   name: string;
   order: number;
   candidates: VotingCandidate[];
-  /** Real backend club id for the position (used when submitting the vote). */
-  clubId?: number;
-  /** Real backend constituency id for a Class Representative position. */
+  /** Real backend constituency id for the Class Representative position. */
   constituencyId?: number;
 }
 
