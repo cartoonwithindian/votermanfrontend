@@ -27,25 +27,7 @@ interface ResultsFull {
   ballots_submitted: number;
   participation_rate: number;
   results_published: boolean;
-  total_clubs: number;
   total_constituencies: number;
-  clubs: Array<{
-    club_id: number;
-    club_name: string;
-    positions: Array<{
-      position_id: number;
-      position_name: string;
-      candidates: Array<{
-        candidate_id: number;
-        candidate_name: string;
-        vote_count: number;
-        percentage: number;
-        rank: number;
-        status: string;
-      }>;
-      total_votes: number;
-    }>;
-  }>;
   constituencies: Array<{
     constituency_id: number;
     constituency_name: string;
@@ -87,13 +69,8 @@ export default function AdminResultsPage() {
       setError("");
       setLastUpdated(new Date());
       if (!opts?.silent) {
-        // Expand the first position of each club and each CR constituency by default
+        // Expand the first position of each constituency by default
         const initial: Record<string, boolean> = {};
-        (full.clubs || []).forEach((club) =>
-          (club.positions || []).forEach((pos, i) => {
-            initial[`cl:${club.club_id}:${pos.position_id}`] = i === 0;
-          })
-        );
         (full.constituencies || []).forEach((ct) =>
           (ct.positions || []).forEach((pos, i) => {
             initial[`ct:${ct.constituency_id}:${pos.position_id}`] = i === 0;
@@ -256,10 +233,9 @@ export default function AdminResultsPage() {
                   <p className="text-lg font-bold text-success-600">{results.participation_rate ?? 0}%</p>
                 </div>
                 <div className="bg-primary-50 rounded-xl p-4 col-span-2 sm:col-span-1">
-                  <span className="text-xs font-medium text-primary-600 block mb-1">Clubs / Constituencies</span>
+                  <span className="text-xs font-medium text-primary-600 block mb-1">Constituencies</span>
                   <p className="text-lg font-bold text-primary-700">
-                    {(results.clubs || []).length} /{" "}
-                    {(results.total_constituencies ?? (results.constituencies || []).length)}
+                    {results.total_constituencies ?? (results.constituencies || []).length}
                   </p>
                 </div>
               </div>
@@ -286,8 +262,8 @@ export default function AdminResultsPage() {
               </Card>
             )}
 
-            {/* Result Review by Club -> Position and CR Constituency -> Position */}
-            {(results.clubs || []).length === 0 && (results.constituencies || []).length === 0 ? (
+            {/* Result Review by CR Constituency -> Position */}
+            {(results.constituencies || []).length === 0 ? (
               <Card className="p-12 text-center">
                 <Inbox className="h-12 w-12 text-text-muted mx-auto mb-4" />
                 <h3 className="text-lg font-semibold text-text-primary">No Results Yet</h3>
@@ -297,18 +273,12 @@ export default function AdminResultsPage() {
               </Card>
             ) : (
               (() => {
-                const sections = [
-                  ...(results.clubs || []).map((club) => ({
-                    header: club.club_name,
-                    positions: club.positions || [],
-                    keyPrefix: `cl:${club.club_id}`,
-                  })),
-                  ...(results.constituencies || []).map((ct) => ({
+                const sections =
+                  (results.constituencies || []).map((ct) => ({
                     header: `CR — ${ct.constituency_name}`,
                     positions: ct.positions || [],
                     keyPrefix: `ct:${ct.constituency_id}`,
-                  })),
-                ];
+                  }));
                 return sections.map((section) => (
                   <div key={section.keyPrefix} className="space-y-4">
                     <h3 className="text-sm font-bold uppercase tracking-wider text-text-secondary">

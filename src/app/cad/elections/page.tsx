@@ -13,7 +13,7 @@ interface ElectionRow {
   status: string;
   start_time: string | null;
   end_time: string | null;
-  clubs: number;
+  constituencies: number;
   votes_cast: number;
   eligible_voters: number;
 }
@@ -89,7 +89,7 @@ export default function CadElectionsPage() {
                 <tr className="border-b border-border">
                   <th className="text-left font-semibold text-text-primary py-3 px-4">Election</th>
                   <th className="text-left font-semibold text-text-primary py-3 px-4">Status</th>
-                  <th className="text-left font-semibold text-text-primary py-3 px-4">Clubs</th>
+                  <th className="text-left font-semibold text-text-primary py-3 px-4">Constituencies</th>
                   <th className="text-left font-semibold text-text-primary py-3 px-4">Votes</th>
                   <th className="text-left font-semibold text-text-primary py-3 px-4">Eligible</th>
                 </tr>
@@ -101,7 +101,7 @@ export default function CadElectionsPage() {
                     <td className="py-3 px-4">
                       <Badge variant={STATUS_VARIANT[e.status] || "neutral"}>{e.status}</Badge>
                     </td>
-                    <td className="py-3 px-4 text-text-secondary">{e.clubs}</td>
+                    <td className="py-3 px-4 text-text-secondary">{e.constituencies}</td>
                     <td className="py-3 px-4 text-text-secondary">{e.votes_cast}</td>
                     <td className="py-3 px-4 text-text-secondary">{e.eligible_voters}</td>
                   </tr>
