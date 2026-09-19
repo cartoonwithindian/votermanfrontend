@@ -13,6 +13,31 @@ export class ApiError extends Error {
   }
 }
 
+let reauthInFlight = false;
+
+// A 401 on a state-changing request usually means the session binding token
+// (sessionStorage) is gone while the session cookie survived — e.g. the user
+// closed the browser, or the binding token was cleared. GETs still pass, so
+// pages load fine but every admin action fails. Force a clean re-login that
+// re-issues the binding token instead of letting it fail silently.
+function handleReauth(): void {
+  if (typeof window === "undefined" || reauthInFlight) return;
+  reauthInFlight = true;
+  const match = document.cookie.match(/campusvote_auth=([^;]+)/);
+  let role = "";
+  if (match) {
+    try {
+      role = (JSON.parse(decodeURIComponent(match[1])) as { role?: string }).role || "";
+    } catch {
+      role = "";
+    }
+  }
+  window.sessionStorage.removeItem("campusvote_binding_token");
+  document.cookie = "campusvote_auth=; path=/; max-age=0";
+  const dest = role === "administrator" ? "/login/admin" : "/login/student";
+  window.location.assign(`${dest}?reauth=1`);
+}
+
 class ApiClient {
   private csrfToken: string | null = null;
 
@@ -73,6 +98,9 @@ class ApiClient {
     const data = await res.json().catch(() => ({}));
 
     if (!res.ok) {
+      if (res.status === 401 && options.method && ['POST', 'PUT', 'PATCH', 'DELETE'].includes(options.method)) {
+        handleReauth();
+      }
       throw new ApiError(data.message || data.error?.message || data.error || `HTTP ${res.status}`, res.status);
     }
 

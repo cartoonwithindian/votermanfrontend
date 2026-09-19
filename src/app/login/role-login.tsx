@@ -139,6 +139,16 @@ export function RoleLoginPage({
       setError("This account is not authorized for this portal. Sign in from the correct portal for your role.");
       sessionStorage.removeItem("campusvote_role_mismatch");
     }
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get("reauth") === "1") {
+        setNotice(
+          portal === "admin"
+            ? "Your admin session expired. Sign in again to continue — your approval and rejection actions will work once more."
+            : "Your session expired. Sign in again to continue."
+        );
+      }
+    }
   }, []);
 
   const fetchCsrfToken = async (): Promise<string> => {
