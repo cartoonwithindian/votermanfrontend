@@ -429,6 +429,8 @@ export function UnifiedAuthPage({
 
   return (
     <AuthLayout>
+      {/* Clerk Smart CAPTCHA mount — required for bot protection on custom signUp.create / signIn.sso flows */}
+      <div id="clerk-captcha" />
       <AuthCard>
         {CLERK_ENABLED && <ClerkSessionForward role={portal} />}
         <div className="text-center mb-5">

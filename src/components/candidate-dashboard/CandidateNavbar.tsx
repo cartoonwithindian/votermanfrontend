@@ -6,7 +6,15 @@ import { ChevronDown, LogOut, Menu, Settings, User, Eye } from "lucide-react";
 import { Avatar } from "@/components/ui/Avatar";
 import NotificationBell from "@/components/ui/notification-bell";
 import { useSignOut } from "@/hooks/useSignOut";
-import { useUser } from "@clerk/nextjs";
+import { useUser as useClerkUser } from "@clerk/nextjs";
+
+function useSafeUser() {
+  try {
+    return useClerkUser();
+  } catch {
+    return { user: null } as { user: { imageUrl?: string } | null };
+  }
+}
 
 export interface CandidateNavbarProps {
   onToggleMenu: () => void;
@@ -20,7 +28,7 @@ export const CandidateNavbar: React.FC<CandidateNavbarProps> = ({
   candidateId,
 }) => {
   const signOut = useSignOut();
-  const { user } = useUser();
+  const { user } = useSafeUser();
   const [dropdownOpen, setDropdownOpen] = useState(false);
 
   return (

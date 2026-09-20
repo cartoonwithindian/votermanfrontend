@@ -96,7 +96,7 @@ export default function AdminReportsPage() {
       // Candidate applications from the real review endpoint
       try {
         const res = await fetch(
-          `${(process.env.NEXT_PUBLIC_API_URL || "https://voteweb-backend-api.onrender.com/api/v1").replace(/\/$/, "")}/admin/candidate-applications`,
+          `${(process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000/api/v1").replace(/\/$/, "")}/admin/candidate-applications`,
           { credentials: "include" }
         )
         if (res.ok) {

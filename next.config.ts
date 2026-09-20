@@ -44,14 +44,14 @@ const extraOrigins = (process.env.SERVER_ACTIONS_ALLOWED_ORIGINS ?? "")
 // frontend origin (same-site cookies); Next.js proxies /api/* to this origin.
 // Override per-deployment via BACKEND_API_ORIGIN.
 const backendApiOrigin =
-  process.env.BACKEND_API_ORIGIN || "https://voteweb-backend-api.onrender.com";
+  process.env.BACKEND_API_ORIGIN || "http://localhost:3000";
 
 const nextConfig: NextConfig = {
   allowedDevOrigins: ["127.0.0.1"],
   // Proxy API traffic through this server so cookies (cv_sid, cv_csrf) are
-  // first-party. The frontend and backend live on separate *.onrender.com
-  // subdomains (different sites under the public-suffix list); without this,
-  // iOS Safari's ITP blocks the cross-site cookies and login always fails.
+  // first-party. In local development the frontend proxies to
+  // http://localhost:3000; without this, cookies may be blocked when origins
+  // differ and login can fail.
   async rewrites() {
     return [
       {

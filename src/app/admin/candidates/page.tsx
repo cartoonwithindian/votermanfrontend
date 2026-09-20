@@ -19,8 +19,11 @@ import {
   ArrowLeft,
   ChevronDown,
   X,
+  Upload,
+  FileJson,
+  Trash2,
 } from "lucide-react"
-import { useState, useMemo, useEffect } from "react"
+import { useState, useMemo, useEffect, useRef } from "react"
 import { COURSES } from "@/lib/class-data"
 
 export default function CandidateManagementPage() {
@@ -41,6 +44,76 @@ export default function CandidateManagementPage() {
 
   const [approveError, setApproveError] = useState("")
 
+  // JSON override state
+  const [jsonInfo, setJsonInfo] = useState<{ hasJson: boolean; count: number; candidates?: any[] } | null>(null)
+  const [jsonUploading, setJsonUploading] = useState(false)
+  const [jsonError, setJsonError] = useState("")
+  const fileRef = useRef<HTMLInputElement>(null)
+  const API_BASE = (process.env.NEXT_PUBLIC_API_URL || "/api/v1").replace(/\/$/, "")
+
+  const fetchJsonInfo = async () => {
+    try {
+      const res = await fetch(`${API_BASE}/admin/candidates/json`, { credentials: "include" })
+      if (res.ok) {
+        const j = await res.json()
+        setJsonInfo({ hasJson: j.hasJson, count: j.count || 0, candidates: j.candidates || [] })
+      }
+    } catch {}
+  }
+
+  const fetchCsrf = async () => {
+    try {
+      const r = await fetch(`${API_BASE}/auth/csrf`, { credentials: "include" })
+      const j = await r.json().catch(() => ({}))
+      return j.data?.csrfToken || ""
+    } catch { return "" }
+  }
+
+  const handleJsonUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setJsonError("")
+    setJsonUploading(true)
+    try {
+      const text = await file.text()
+      const parsed = JSON.parse(text)
+      const arr = Array.isArray(parsed) ? parsed : Array.isArray(parsed.candidates) ? parsed.candidates : null
+      if (!arr) throw new Error("JSON must be array or {candidates:[...]}")
+      const csrf = await fetchCsrf()
+      const res = await fetch(`${API_BASE}/admin/candidates/json`, {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json", "X-CSRF-Token": csrf },
+        body: JSON.stringify({ candidates: arr }),
+      })
+      const body = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(body.message || "Upload failed")
+      showToast(`JSON uploaded: ${body.count} candidates — students now see JSON (cohort-filtered)`, "success")
+      fetchJsonInfo()
+    } catch (err: any) {
+      setJsonError(err.message || "Invalid JSON")
+    } finally {
+      setJsonUploading(false)
+      if (fileRef.current) fileRef.current.value = ""
+    }
+  }
+
+  const handleJsonDelete = async () => {
+    try {
+      const csrf = await fetchCsrf()
+      const res = await fetch(`${API_BASE}/admin/candidates/json`, {
+        method: "DELETE",
+        credentials: "include",
+        headers: { "X-CSRF-Token": csrf },
+      })
+      if (!res.ok) throw new Error("Delete failed")
+      showToast("JSON removed — students now see DB approved candidates", "success")
+      fetchJsonInfo()
+    } catch (e: any) {
+      showToast(e.message || "Delete failed", "error")
+    }
+  }
+
   // Courses offered on the candidate application form + any course seen in real data
   const formDepartments = COURSES
   const statuses = ["all", "draft", "submitted", "under_review", "changes_requested", "approved", "rejected"]
@@ -58,6 +131,7 @@ export default function CandidateManagementPage() {
       .then(setCandidates)
       .catch(() => setCandidates([]))
       .finally(() => setLoading(false))
+    fetchJsonInfo()
   }, [])
 
   const filteredCandidates = useMemo(() => {
@@ -139,6 +213,42 @@ export default function CandidateManagementPage() {
           <h1 className="text-2xl font-bold text-text-primary">Candidate Management</h1>
           <p className="text-text-secondary mt-1">Review and manage candidate applications.</p>
         </div>
+
+        {/* JSON override — Card/Profile fields, cohort-isolated */}
+        <Card className="p-5 border-primary-200 bg-primary-50/50">
+          <div className="flex items-start justify-between gap-4 flex-wrap">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-primary-600 flex items-center justify-center"><FileJson className="w-5 h-5 text-white" /></div>
+              <div>
+                <h2 className="font-semibold text-text-primary flex items-center gap-2">JSON Candidate Override {jsonInfo?.hasJson && <Badge variant="success">{jsonInfo.count} active</Badge>}</h2>
+                <p className="text-xs text-text-secondary mt-0.5">Upload JSON with <strong>8 fields only</strong>: <code>profilePhotoUrl</code> (link), <code>Full Name</code>, <code>Position</code>, <code>Department</code>, <code>Year</code>, <code>Section</code>, <code>Email</code>, <code>Manifesto</code>. Students see <strong>only same department/year/section</strong>.</p>
+                <p className="text-xs text-text-muted mt-1">Format: <code>[{"{fullName, position, department, year, section, email, profilePhotoUrl, manifesto}"}]</code></p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <input ref={fileRef} type="file" accept=".json,application/json" onChange={handleJsonUpload} className="hidden" />
+              <Button variant="primary" size="sm" className="gap-1.5" isLoading={jsonUploading} onClick={() => fileRef.current?.click()}><Upload className="w-4 h-4" />Upload JSON</Button>
+              {jsonInfo?.hasJson && <Button variant="outline" size="sm" className="gap-1.5 text-error-600" onClick={handleJsonDelete}><Trash2 className="w-4 h-4" />Remove JSON</Button>}
+            </div>
+          </div>
+          {jsonInfo?.hasJson && <p className="text-xs text-success-700 mt-3">✓ JSON active — <code>candidateService.js:25 findApproved()</code> now serves JSON (filtered by <code>candidateController.js:38 hasOwnClass</code>). Delete to revert to DB.</p>}
+          {jsonError && <p className="text-xs text-error-600 mt-2">{jsonError}</p>}
+          {jsonInfo && !jsonInfo.hasJson && <p className="text-xs text-text-muted mt-2">No JSON override — students see DB approved candidates.</p>}
+          {jsonInfo?.hasJson && jsonInfo.candidates && jsonInfo.candidates.length > 0 && (
+            <div className="mt-4 border-t border-primary-200 pt-4">
+              <h3 className="text-sm font-semibold text-text-primary mb-2">JSON Candidates (8-field, cohort-filtered)</h3>
+              <div className="overflow-x-auto">
+                <table className="w-full text-xs">
+                  <thead><tr className="border-b border-border"><th className="text-left px-2 py-1">ID</th><th className="text-left px-2 py-1">Full Name</th><th className="text-left px-2 py-1">Position</th><th className="text-left px-2 py-1">Dept</th><th className="text-left px-2 py-1">Year</th><th className="text-left px-2 py-1">Sec</th><th className="text-left px-2 py-1">Email</th><th className="text-left px-2 py-1">Photo</th></tr></thead>
+                  <tbody>{jsonInfo.candidates.map((c:any)=>(
+                    <tr key={c.id} className="border-b border-border/50"><td className="px-2 py-1 font-mono">{c.id}</td><td className="px-2 py-1">{c.fullName||c.FullName||c.name}</td><td className="px-2 py-1">{c.position||c.position_name||c.Position}</td><td className="px-2 py-1">{c.department}</td><td className="px-2 py-1">{c.year}</td><td className="px-2 py-1">{c.section||"—"}</td><td className="px-2 py-1 truncate max-w-[120px]">{c.email||c.Email}</td><td className="px-2 py-1 truncate max-w-[100px]">{c.profilePhotoUrl ? "✓" : "—"}</td></tr>
+                  ))}</tbody>
+                </table>
+              </div>
+              <p className="text-xs text-text-muted mt-1">Manifesto hidden in table — shown on Profile <code>[candidateId]/page.tsx:151</code>. Cohort: <code>BCA•A:4</code> <code>BCA•B:1</code> <code>BBA:1</code></p>
+            </div>
+          )}
+        </Card>
 
         <Card className="p-4">
           <div className="flex flex-wrap gap-4 items-center">

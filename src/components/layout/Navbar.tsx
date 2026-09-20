@@ -7,7 +7,15 @@ import { Avatar } from "../ui/Avatar";
 import { Dropdown } from "../ui/Dropdown";
 import NotificationBell from "../ui/notification-bell";
 import { useSignOut } from "@/hooks/useSignOut";
-import { useUser } from "@clerk/nextjs";
+import { useUser as useClerkUser } from "@clerk/nextjs";
+
+function useSafeUser() {
+  try {
+    return useClerkUser();
+  } catch {
+    return { user: null } as { user: { imageUrl?: string } | null };
+  }
+}
 
 export interface NavbarProps {
   onToggleMenu: () => void;
@@ -17,7 +25,7 @@ export interface NavbarProps {
 export const Navbar: React.FC<NavbarProps> = ({ onToggleMenu, studentName }) => {
   const router = useRouter();
   const signOut = useSignOut();
-  const { user } = useUser();
+  const { user } = useSafeUser();
   const dropdownItems = [
     {
       label: "My Profile",
