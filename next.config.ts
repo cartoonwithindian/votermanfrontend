@@ -40,6 +40,23 @@ const extraOrigins = (process.env.SERVER_ACTIONS_ALLOWED_ORIGINS ?? "")
   .map((origin) => origin.trim())
   .filter(Boolean);
 
+// Production hosts that must be accepted for Server Actions (E80 guard).
+// Includes the app's custom domain (students.made-a.tech), the Clerk s1
+// subdomain that users mistakenly hit as the app host (s1.students.made-a.tech),
+// the Clerk Frontend API hosts (clerk.*), and the Render onrender fallbacks.
+// SERVER_ACTIONS_ALLOWED_ORIGINS adds any extra hosts (comma-separated) on
+// top of this built-in list.
+const prodAllowedOrigins = [
+  "students.made-a.tech",
+  "s1.students.made-a.tech",
+  "clerk.students.made-a.tech",
+  "clerk.s1.students.made-a.tech",
+  "votermanfrontend.onrender.com",
+  "votermanbackend.onrender.com",
+  "made-a.tech",
+  "www.made-a.tech",
+];
+
 // Backend origin for the /api reverse proxy. The browser ONLY talks to the
 // frontend origin (same-site cookies); Next.js proxies /api/* to this origin.
 // Override per-deployment via BACKEND_API_ORIGIN.
@@ -66,10 +83,15 @@ const nextConfig: NextConfig = {
       // local development / tunnels. For a production deployment behind a
       // proxy, set SERVER_ACTIONS_ALLOWED_ORIGINS to the public host(s),
       // e.g. SERVER_ACTIONS_ALLOWED_ORIGINS="vote.example.com"
+      // s1.students.made-a.tech is included: users currently reach the app via
+      // https://s1.students.made-a.tech/admin/... (Clerk's s1 subdomain) — that
+      // host is the Clerk JWKS (https://clerk.s1...), not the app's canonical
+      // host (students.made-a.tech). Allow both so Server Actions POSTs from
+      // either host don't trigger E80 "Invalid Server Actions request."
       allowedOrigins:
         process.env.NODE_ENV !== "production"
           ? [...devAllowedOrigins, ...extraOrigins]
-          : extraOrigins,
+          : [...prodAllowedOrigins, ...extraOrigins],
     },
   },
 };

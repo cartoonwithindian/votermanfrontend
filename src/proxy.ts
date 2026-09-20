@@ -6,7 +6,38 @@ const hasClerkKey = Boolean(process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY);
 const IS_STUDENT_PORTAL_CLOSED =
   process.env.NEXT_PUBLIC_STUDENT_PORTAL_CLOSED === "true";
 
+// Canonical app host is students.made-a.tech. The Clerk s1 subdomain
+// (clerk.s1.students.made-a.tech) serves the JWKS + Frontend API; its bare
+// `s1.students.made-a.tech` host is NOT the app host, but Render may route
+// it to the same service if s1 is added as a custom domain. Users hitting
+// https://s1.students.made-a.tech/admin/... would then see the app under the
+// wrong host: the live publishable key pk_live_Y2xlcmsuc3R1ZGVudHM... encodes
+// `clerk.students.made-a.tech`, not s1, so Clerk's FAPI cookies / session
+// verification mismatches and the UI can 500. Handle gracefully either by
+// canonicalising (preferred) or by allowing the host and degrading.
+const CANONICAL_HOST = "students.made-a.tech";
+const S1_HOSTS = new Set(["s1.students.made-a.tech", "clerk.s1.students.made-a.tech"]);
+const CANONICAL_REDIRECT = process.env.S1_CANONICAL_REDIRECT !== "false"; // set "false" to serve s1 directly without redirect
+
+function maybeCanonicalRedirect(request: NextRequest): NextResponse | null {
+  const host = (request.headers.get("host") || "").split(":")[0].toLowerCase();
+  if (!S1_HOSTS.has(host)) return null;
+  // Don't redirect API / Next internals — they are same-origin XHR proxied to
+  // BACKEND_API_ORIGIN via next.config rewrites; a redirect would add latency.
+  const { pathname } = request.nextUrl;
+  if (pathname.startsWith("/api") || pathname.startsWith("/_next")) return null;
+  if (!CANONICAL_REDIRECT) return null;
+  const url = request.nextUrl.clone();
+  url.protocol = "https:";
+  url.host = CANONICAL_HOST;
+  url.port = "";
+  return NextResponse.redirect(url, 308);
+}
+
 function appProxy(request: NextRequest) {
+  const redirect = maybeCanonicalRedirect(request);
+  if (redirect) return redirect;
+
   const { pathname } = request.nextUrl;
 
   // Student portal block (the login page itself always stays reachable —
@@ -81,9 +112,28 @@ function appProxy(request: NextRequest) {
  * soft-cookie redirect below.
  *
  * Without a Clerk key, only the plain app proxy runs (backend OTP flow).
+ *
+ * s1 safety: clerkMiddleware can throw when the request Host (s1...) does
+ * not match the publishable key's domain (students.made-a.tech). Wrap so an
+ * s1 request never 500s — fall back to the plain proxy which still serves
+ * the page via the backend OTP flow.
  */
-export default hasClerkKey
-  ? clerkMiddleware(async (_auth, req) => appProxy(req))
+const clerkHandler = hasClerkKey ? clerkMiddleware(async (_auth, req) => appProxy(req)) : null;
+
+export default hasClerkKey && clerkHandler
+  ? async function proxyWithClerk(request: NextRequest) {
+      // Canonical redirect before invoking Clerk — avoids domain-mismatch errors.
+      const redirect = maybeCanonicalRedirect(request);
+      if (redirect) return redirect;
+      try {
+        // clerkMiddleware is a Next.js middleware factory; invoke it directly.
+        // If it throws for the s1 host (domain mismatch) fall back gracefully.
+        return (await (clerkHandler as unknown as (req: NextRequest) => Promise<NextResponse>)(request)) ?? appProxy(request);
+      } catch (err) {
+        console.warn("[proxy] clerkMiddleware failed, falling back to appProxy:", (err as Error)?.message);
+        return appProxy(request);
+      }
+    }
   : function proxyWithoutClerk(request: NextRequest) {
       return appProxy(request);
     };
