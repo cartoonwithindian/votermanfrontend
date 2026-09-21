@@ -11,10 +11,11 @@ const IS_STUDENT_PORTAL_CLOSED =
 // `s1.students.made-a.tech` host is NOT the app host, but Render may route
 // it to the same service if s1 is added as a custom domain. Users hitting
 // https://s1.students.made-a.tech/admin/... would then see the app under the
-// wrong host: the live publishable key pk_live_Y2xlcmsuc3R1ZGVudHM... encodes
-// `clerk.students.made-a.tech`, not s1, so Clerk's FAPI cookies / session
-// verification mismatches and the UI can 500. Handle gracefully either by
-// canonicalising (preferred) or by allowing the host and degrading.
+// wrong host: the live publishable key encodes the Clerk custom domain set by
+// NEXT_PUBLIC_CLERK_APP_DOMAIN (default clerk.students.made-a.tech), not s1, so
+// Clerk's FAPI cookies / session verification mismatches and the UI can 500.
+// Handle gracefully either by canonicalising (preferred) or by allowing the
+// host and degrading.
 const CANONICAL_HOST = "students.made-a.tech";
 const S1_HOSTS = new Set(["s1.students.made-a.tech", "clerk.s1.students.made-a.tech"]);
 const CANONICAL_REDIRECT = process.env.S1_CANONICAL_REDIRECT !== "false"; // set "false" to serve s1 directly without redirect

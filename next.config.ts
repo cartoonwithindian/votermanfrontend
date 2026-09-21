@@ -46,11 +46,19 @@ const extraOrigins = (process.env.SERVER_ACTIONS_ALLOWED_ORIGINS ?? "")
 // the Clerk Frontend API hosts (clerk.*), and the Render onrender fallbacks.
 // SERVER_ACTIONS_ALLOWED_ORIGINS adds any extra hosts (comma-separated) on
 // top of this built-in list.
+//
+// The Clerk custom domain comes from NEXT_PUBLIC_CLERK_APP_DOMAIN (set in the
+// env file); the satellite clerk.s1.<host> is derived from it. Defaults keep
+// clerk.students.made-a.tech for existing deployments.
+const clerkAppDomain = process.env.NEXT_PUBLIC_CLERK_APP_DOMAIN || "clerk.students.made-a.tech";
+const clerkS1Domain =
+  process.env.NEXT_PUBLIC_CLERK_APP_DOMAIN_S1 ||
+  `clerk.s1.${clerkAppDomain.split(".").slice(1).join(".")}`;
 const prodAllowedOrigins = [
   "students.made-a.tech",
   "s1.students.made-a.tech",
-  "clerk.students.made-a.tech",
-  "clerk.s1.students.made-a.tech",
+  clerkAppDomain,
+  clerkS1Domain,
   "votermanfrontend.onrender.com",
   "votermanbackend.onrender.com",
   "made-a.tech",

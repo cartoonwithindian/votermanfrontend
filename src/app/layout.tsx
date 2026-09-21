@@ -18,11 +18,19 @@ const clerkKey = process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY;
 // mistakenly open https://s1.students.made-a.tech/admin/... as the app. Allow
 // it explicitly so Clerk doesn't reject the origin when the request Host is s1.
 // Env NEXT_PUBLIC_CLERK_ALLOWED_REDIRECT_ORIGINS adds more hosts.
+//
+// The Clerk custom domain comes from NEXT_PUBLIC_CLERK_APP_DOMAIN (set in the
+// env file); the satellite clerk.s1.<host> is derived from it. Defaults keep
+// clerk.students.made-a.tech for existing deployments.
+const clerkAppDomain = process.env.NEXT_PUBLIC_CLERK_APP_DOMAIN || "clerk.students.made-a.tech";
+const clerkS1Domain =
+  process.env.NEXT_PUBLIC_CLERK_APP_DOMAIN_S1 ||
+  `clerk.s1.${clerkAppDomain.split(".").slice(1).join(".")}`;
 const builtinAllowedRedirectOrigins = [
   "https://students.made-a.tech",
   "https://s1.students.made-a.tech",
-  "https://clerk.students.made-a.tech",
-  "https://clerk.s1.students.made-a.tech",
+  `https://${clerkAppDomain}`,
+  `https://${clerkS1Domain}`,
   "https://votermanfrontend.onrender.com",
   "https://votermanbackend.onrender.com",
 ];
