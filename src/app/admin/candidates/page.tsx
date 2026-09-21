@@ -65,8 +65,17 @@ export default function CandidateManagementPage() {
     try {
       const r = await fetch(`${API_BASE}/auth/csrf`, { credentials: "include" })
       const j = await r.json().catch(() => ({}))
-      return j.data?.csrfToken || ""
+      const token = j.data?.csrfToken || ""
+      if (token && typeof document !== "undefined") {
+        document.cookie = `cv_csrf=${encodeURIComponent(token)}; path=/; SameSite=Lax; max-age=3600`
+      }
+      return token
     } catch { return "" }
+  }
+
+  const getBindingToken = () => {
+    if (typeof window === "undefined") return ""
+    return window.sessionStorage.getItem("campusvote_binding_token") || ""
   }
 
   const handleJsonUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -83,7 +92,7 @@ export default function CandidateManagementPage() {
       const res = await fetch(`${API_BASE}/admin/candidates/json`, {
         method: "POST",
         credentials: "include",
-        headers: { "Content-Type": "application/json", "X-CSRF-Token": csrf },
+        headers: { "Content-Type": "application/json", "X-CSRF-Token": csrf, "X-Session-Binding": getBindingToken() },
         body: JSON.stringify({ candidates: arr }),
       })
       const body = await res.json().catch(() => ({}))
@@ -104,7 +113,7 @@ export default function CandidateManagementPage() {
       const res = await fetch(`${API_BASE}/admin/candidates/json`, {
         method: "DELETE",
         credentials: "include",
-        headers: { "X-CSRF-Token": csrf },
+        headers: { "X-CSRF-Token": csrf, "X-Session-Binding": getBindingToken() },
       })
       if (!res.ok) throw new Error("Delete failed")
       showToast("JSON removed — students now see DB approved candidates", "success")
