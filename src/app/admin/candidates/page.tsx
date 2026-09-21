@@ -21,6 +21,7 @@ import {
   X,
   Upload,
   FileJson,
+  ListChecks,
   Trash2,
 } from "lucide-react"
 import { useState, useMemo, useEffect, useRef } from "react"
@@ -48,6 +49,9 @@ export default function CandidateManagementPage() {
   const [jsonInfo, setJsonInfo] = useState<{ hasJson: boolean; count: number; candidates?: any[] } | null>(null)
   const [jsonUploading, setJsonUploading] = useState(false)
   const [jsonError, setJsonError] = useState("")
+  const [ballotAdding, setBallotAdding] = useState(false)
+  const [ballotAdded, setBallotAdded] = useState<{ name: string; candidateId: string; department: string; year: string; section: string; positionName: string }[]>([])
+  const [removingId, setRemovingId] = useState<string | null>(null)
   const fileRef = useRef<HTMLInputElement>(null)
   const API_BASE = (process.env.NEXT_PUBLIC_API_URL || "/api/v1").replace(/\/$/, "")
 
@@ -120,6 +124,51 @@ export default function CandidateManagementPage() {
       fetchJsonInfo()
     } catch (e: any) {
       showToast(e.message || "Delete failed", "error")
+    }
+  }
+
+  const handleAddToBallot = async () => {
+    if (!jsonInfo?.hasJson) {
+      showToast("Upload a JSON file first", "error")
+      return
+    }
+    setBallotAdding(true)
+    try {
+      const csrf = await fetchCsrf()
+      const res = await fetch(`${API_BASE}/admin/candidates/json/add-to-ballot`, {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json", "X-CSRF-Token": csrf, "X-Session-Binding": getBindingToken() },
+        body: JSON.stringify({}),
+      })
+      const body = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(body.message || "Add to ballot failed")
+      setBallotAdded(body.added ?? [])
+      showToast(body.message ?? "Candidates added to ballot", "success")
+    } catch (err: any) {
+      showToast(err.message || "Add to ballot failed", "error")
+    } finally {
+      setBallotAdding(false)
+    }
+  }
+
+  const handleRemoveBallotCandidate = async (id: string) => {
+    setRemovingId(id)
+    try {
+      const csrf = await fetchCsrf()
+      const res = await fetch(`${API_BASE}/admin/candidates/ballot/${id}`, {
+        method: "DELETE",
+        credentials: "include",
+        headers: { "X-CSRF-Token": csrf, "X-Session-Binding": getBindingToken() },
+      })
+      const body = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(body.message || "Remove failed")
+      setBallotAdded((prev) => prev.filter((c) => c.candidateId !== id))
+      showToast("Candidate removed from ballot", "success")
+    } catch (err: any) {
+      showToast(err.message || "Remove failed", "error")
+    } finally {
+      setRemovingId(null)
     }
   }
 
@@ -238,9 +287,10 @@ export default function CandidateManagementPage() {
               <input ref={fileRef} type="file" accept=".json,application/json" onChange={handleJsonUpload} className="hidden" />
               <Button variant="primary" size="sm" className="gap-1.5" isLoading={jsonUploading} onClick={() => fileRef.current?.click()}><Upload className="w-4 h-4" />Upload JSON</Button>
               {jsonInfo?.hasJson && <Button variant="outline" size="sm" className="gap-1.5 text-error-600" onClick={handleJsonDelete}><Trash2 className="w-4 h-4" />Remove JSON</Button>}
+              {jsonInfo?.hasJson && <Button variant="primary" size="sm" className="gap-1.5" isLoading={ballotAdding} onClick={handleAddToBallot}><ListChecks className="w-4 h-4" />Add to Ballot</Button>}
             </div>
           </div>
-          {jsonInfo?.hasJson && <p className="text-xs text-success-700 mt-3">✓ JSON active — <code>candidateService.js:25 findApproved()</code> now serves JSON (filtered by <code>candidateController.js:38 hasOwnClass</code>). Delete to revert to DB.</p>}
+          {jsonInfo?.hasJson && <p className="text-xs text-success-700 mt-3">✓ JSON active — <code>candidateService.js:25 findApproved()</code> now serves JSON (filtered by <code>candidateController.js:38 hasOwnClass</code>). Delete the JSON to revert to the previous ballot rows.</p>}
           {jsonError && <p className="text-xs text-error-600 mt-2">{jsonError}</p>}
           {jsonInfo && !jsonInfo.hasJson && <p className="text-xs text-text-muted mt-2">No JSON override — students see DB approved candidates.</p>}
           {jsonInfo?.hasJson && jsonInfo.candidates && jsonInfo.candidates.length > 0 && (
@@ -255,6 +305,19 @@ export default function CandidateManagementPage() {
                 </table>
               </div>
               <p className="text-xs text-text-muted mt-1">Manifesto hidden in table — shown on Profile <code>[candidateId]/page.tsx:151</code>. Cohort: <code>BCA•A:4</code> <code>BCA•B:1</code> <code>BBA:1</code></p>
+            </div>
+          )}
+          {ballotAdded.length > 0 && (
+            <div className="mt-4 border-t border-primary-200 pt-4">
+              <h3 className="text-sm font-semibold text-text-primary mb-2">Added to Ballot ({ballotAdded.length})</h3>
+              <div className="overflow-x-auto">
+                <table className="w-full text-xs">
+                  <thead><tr className="border-b border-border"><th className="text-left px-2 py-1">Name</th><th className="text-left px-2 py-1">Dept/Year/Section</th><th className="text-left px-2 py-1">Position</th><th className="text-left px-2 py-1">Actions</th></tr></thead>
+                  <tbody>{ballotAdded.filter((row) => row.candidateId).map((row) => (
+                    <tr key={row.candidateId} className="border-b border-border/50"><td className="px-2 py-1">{row.name}</td><td className="px-2 py-1">{row.department} • {row.year} • {row.section || "—"}</td><td className="px-2 py-1">{row.positionName}</td><td className="px-2 py-1"><Button variant="outline" size="sm" className="gap-1 text-error-600" isLoading={removingId === row.candidateId} disabled={removingId !== null && removingId !== row.candidateId} onClick={() => handleRemoveBallotCandidate(row.candidateId)}><Trash2 className="w-3 h-3" />Remove</Button></td></tr>
+                  ))}</tbody>
+                </table>
+              </div>
             </div>
           )}
         </Card>
