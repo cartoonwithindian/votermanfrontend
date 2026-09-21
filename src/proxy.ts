@@ -92,7 +92,7 @@ function appProxy(request: NextRequest) {
   if (!authCookie) {
     const url = request.nextUrl.clone();
     if (pathname.startsWith("/candidate")) {
-      url.pathname = "/candidate/login";
+      url.pathname = "/student/login";
     } else if (pathname.startsWith("/student")) {
       url.pathname = "/student/login";
     } else {

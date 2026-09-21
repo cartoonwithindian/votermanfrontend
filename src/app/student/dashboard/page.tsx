@@ -236,15 +236,7 @@ export default function StudentDashboardPage() {
               <p className="text-xs text-text-secondary">View candidates</p>
             </div>
           </Link>
-          <Link href="/candidate/login">
-            <div className="p-4 rounded-xl bg-white border border-amber-200 hover:bg-amber-50 hover:border-amber-300 cursor-pointer transition-colors shadow-sm">
-              <div className="w-10 h-10 rounded-xl bg-amber-100 flex items-center justify-center mb-3">
-                <FileText className="w-5 h-5 text-amber-600" />
-              </div>
-              <h4 className="font-medium text-text-primary">Candidate Nomination</h4>
-              <p className="text-xs text-text-secondary">Apply for election</p>
-            </div>
-          </Link>
+
         </div>
 
         <div className="bg-white rounded-2xl p-5 border border-border shadow-sm">

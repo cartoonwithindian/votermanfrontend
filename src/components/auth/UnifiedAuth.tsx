@@ -721,20 +721,7 @@ export function UnifiedAuthPage({
           Your dashboard is chosen by your account role automatically
           {portal === "candidate" && " — new candidates wait for approval before their dashboard unlocks"}.
         </div>
-        {lockPortal && portal === "student" && (
-          <div className="mt-4 p-3 rounded-xl bg-amber-50 border border-amber-200 flex items-start gap-2.5 text-left">
-            <div className="w-7 h-7 rounded-lg bg-amber-500 flex items-center justify-center shrink-0 mt-0.5">
-              <Mic className="w-3.5 h-3.5 text-white" />
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-xs font-bold text-amber-800 leading-none">For Candidate Nomination</p>
-              <p className="text-xs text-amber-700 mt-1">Click this link to apply as a candidate:</p>
-              <a href="/candidate/login" className="inline-flex items-center gap-1.5 mt-1.5 text-xs font-semibold text-amber-800 underline decoration-amber-300 underline-offset-2 hover:text-amber-900 break-all">
-                {APP_ORIGIN ? `${APP_ORIGIN}/candidate/login` : "/candidate/login"}
-              </a>
-            </div>
-          </div>
-        )}
+
       </AuthCard>
     </AuthLayout>
   );

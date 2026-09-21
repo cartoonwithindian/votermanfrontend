@@ -23,7 +23,7 @@ export default function AccessDeniedPage() {
         const map: Record<string, string> = {
           ADMIN: "/admin/dashboard",
           CAD: "/cad/dashboard",
-          CANDIDATE: "/candidate/dashboard",
+          CANDIDATE: "/student/dashboard",
           STUDENT: "/student/dashboard",
         };
         if (map[role]) setHomeHref(map[role]);

@@ -5,7 +5,7 @@ import { AdminLayout } from "@/components/admin-dashboard/AdminLayout";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
-import { adminApi, type AdminElectionRecord, type AdminConstituencyRecord, type ApprovedCandidateRow } from "@/lib/api/admin";
+import { adminApi, type AdminElectionRecord, type AdminConstituencyRecord, type ApprovedCandidateRow, type StudentClass } from "@/lib/api/admin";
 import { CourseSelect } from "@/components/ui/CourseSelect";
 import { BatchSelect } from "@/components/ui/BatchSelect";
 import { seatLabel } from "@/lib/class-data";
@@ -24,6 +24,7 @@ import {
   Square,
   Plus,
   Trash2,
+  Zap,
 } from "lucide-react";
 
 const STATUS_OPTIONS = ["DRAFT", "SCHEDULED", "OPEN", "CLOSED", "PUBLISHED"] as const;
@@ -167,6 +168,13 @@ export default function ElectionManagementPage() {
   const [crCandidatesLoading, setCrCandidatesLoading] = useState(false);
   const [crCandidatesError, setCrCandidatesError] = useState("");
 
+  // Setup wizard — auto-detect classes from students table
+  const [detectedClasses, setDetectedClasses] = useState<StudentClass[]>([]);
+  const [detectedClassesLoading, setDetectedClassesLoading] = useState(false);
+  const [selectedClasses, setSelectedClasses] = useState<Set<string>>(new Set());
+  const [bulkCreating, setBulkCreating] = useState(false);
+  const [bulkResult, setBulkResult] = useState<{ created: number; skipped: number } | null>(null);
+
   // Create election
   const [createModalOpen, setCreateModalOpen] = useState(false);
   const [createForm, setCreateForm] = useState({ name: "", start_time: "", end_time: "" });
@@ -296,6 +304,69 @@ export default function ElectionManagementPage() {
   const showCrToast = (type: "success" | "error", message: string) => {
     setCrToast({ type, message });
     setTimeout(() => setCrToast(null), 3500);
+  };
+
+  // Load detected classes from students table
+  const loadDetectedClasses = useCallback(async () => {
+    setDetectedClassesLoading(true);
+    try {
+      const res = await adminApi.getStudentClasses();
+      const classes: StudentClass[] = Array.isArray(res)
+        ? res
+        : ((res as { data?: StudentClass[] }).data as StudentClass[]) || [];
+      setDetectedClasses(classes);
+      // Auto-select all classes by default
+      setSelectedClasses(new Set(classes.map(c => `${c.department}|${c.year_normalized}|${c.section}`)));
+    } catch {
+      setDetectedClasses([]);
+    }
+    setDetectedClassesLoading(false);
+  }, []);
+
+  // Bulk create constituencies for selected classes
+  const handleBulkCreate = async () => {
+    if (!selected || selectedClasses.size === 0) return;
+    setBulkCreating(true);
+    setBulkResult(null);
+    try {
+      const classesToCreate = detectedClasses
+        .filter(c => selectedClasses.has(`${c.department}|${c.year_normalized}|${c.section}`))
+        .map(c => ({
+          department: c.department,
+          year: c.year_normalized,
+          section: c.section,
+        }));
+      const res = await adminApi.bulkCreateConstituencies({
+        election_id: selected.id,
+        classes: classesToCreate,
+      });
+      const data = (res as { data?: { created?: unknown[]; skipped?: unknown[] } }).data || (res as { created?: unknown[]; skipped?: unknown[] });
+      const createdCount = Array.isArray(data?.created) ? data.created.length : 0;
+      const skippedCount = Array.isArray(data?.skipped) ? data.skipped.length : 0;
+      setBulkResult({ created: createdCount, skipped: skippedCount });
+      await loadConstituencies();
+      showCrToast("success", `${createdCount} constituencies created, ${skippedCount} skipped.`);
+    } catch (e) {
+      showCrToast("error", e instanceof Error ? e.message : "Failed to create constituencies.");
+    }
+    setBulkCreating(false);
+  };
+
+  const toggleClass = (key: string) => {
+    setSelectedClasses(prev => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+  };
+
+  const selectAllClasses = () => {
+    setSelectedClasses(new Set(detectedClasses.map(c => `${c.department}|${c.year_normalized}|${c.section}`)));
+  };
+
+  const deselectAllClasses = () => {
+    setSelectedClasses(new Set());
   };
 
   const canModifyConstituencies =
@@ -750,6 +821,110 @@ export default function ElectionManagementPage() {
                     </div>
                   )}
                 </Card>
+
+                {/* Setup Wizard — Auto-detect classes and bulk create constituencies */}
+                {canModifyConstituencies && (
+                  <Card className="p-6 border-l-4 border-l-warning-600">
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
+                      <div className="flex items-center gap-2">
+                        <Zap className="h-5 w-5 text-warning-600" />
+                        <h2 className="text-lg font-semibold text-text-primary">
+                          Quick Setup
+                        </h2>
+                      </div>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="gap-1.5"
+                        onClick={loadDetectedClasses}
+                        disabled={detectedClassesLoading}
+                      >
+                        <RefreshCw className={`w-3.5 h-3.5 ${detectedClassesLoading ? "animate-spin" : ""}`} />
+                        {detectedClasses.length > 0 ? "Refresh Classes" : "Detect Classes from Students"}
+                      </Button>
+                    </div>
+                    <p className="text-sm text-text-secondary mb-4">
+                      Automatically detect all classes from the students table and create constituencies in one click.
+                      Each class gets Boy CR + Girl CR positions.
+                    </p>
+
+                    {detectedClasses.length > 0 && (
+                      <>
+                        <div className="flex items-center gap-3 mb-3">
+                          <span className="text-sm text-text-secondary">
+                            {selectedClasses.size} of {detectedClasses.length} classes selected
+                          </span>
+                          <button onClick={selectAllClasses} className="text-xs text-primary-600 hover:underline cursor-pointer">Select all</button>
+                          <button onClick={deselectAllClasses} className="text-xs text-primary-600 hover:underline cursor-pointer">Deselect all</button>
+                        </div>
+
+                        <div className="max-h-80 overflow-y-auto rounded-xl border border-border-strong mb-4">
+                          {(() => {
+                            const grouped: Record<string, StudentClass[]> = {};
+                            for (const c of detectedClasses) {
+                              const dept = c.department;
+                              if (!grouped[dept]) grouped[dept] = [];
+                              grouped[dept].push(c);
+                            }
+                            return Object.entries(grouped).map(([dept, classes]) => (
+                              <div key={dept}>
+                                <div className="bg-bg-tertiary px-3 py-2 text-xs font-semibold text-text-secondary border-b border-border-strong sticky top-0">
+                                  {dept} ({classes.length} classes)
+                                </div>
+                                {classes.map(c => {
+                                  const key = `${c.department}|${c.year_normalized}|${c.section}`;
+                                  const checked = selectedClasses.has(key);
+                                  return (
+                                    <label
+                                      key={key}
+                                      className={`flex items-center gap-3 px-3 py-2 border-b border-border-strong last:border-b-0 cursor-pointer hover:bg-bg-secondary ${checked ? "bg-primary-50/50" : ""}`}
+                                    >
+                                      <input
+                                        type="checkbox"
+                                        checked={checked}
+                                        onChange={() => toggleClass(key)}
+                                        className="rounded border-border-strong text-primary-600 focus:ring-primary-500"
+                                      />
+                                      <span className="text-sm text-text-primary flex-1">
+                                        {c.year_normalized} {c.section ? `Section ${c.section}` : ""}
+                                      </span>
+                                      <span className="text-xs text-text-muted">
+                                        {c.student_count} students
+                                      </span>
+                                    </label>
+                                  );
+                                })}
+                              </div>
+                            ));
+                          })()}
+                        </div>
+
+                        {bulkResult && (
+                          <p className="text-sm text-success-600 mb-3">
+                            {bulkResult.created} constituencies created, {bulkResult.skipped} skipped (already exist).
+                          </p>
+                        )}
+
+                        <Button
+                          variant="primary"
+                          size="md"
+                          className="gap-1.5"
+                          onClick={handleBulkCreate}
+                          disabled={bulkCreating || selectedClasses.size === 0}
+                        >
+                          <Zap className="w-4 h-4" />
+                          {bulkCreating ? "Creating…" : `Create ${selectedClasses.size} Constituencies`}
+                        </Button>
+                      </>
+                    )}
+
+                    {detectedClasses.length === 0 && !detectedClassesLoading && (
+                      <p className="text-sm text-text-muted">
+                        Click "Detect Classes from Students" to scan the students table for all unique department + year + section combinations.
+                      </p>
+                    )}
+                  </Card>
+                )}
 
                 {/* Danger Zone — real actions */}
                 <Card className="p-6 border-2 border-error-200">

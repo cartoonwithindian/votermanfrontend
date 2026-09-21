@@ -12,7 +12,7 @@ import { saveRollNumber } from "@/lib/roll-number";
 
 const DASHBOARDS: Record<string, string> = {
   student: "/student/dashboard",
-  candidate: "/candidate/dashboard",
+  candidate: "/student/dashboard",
 };
 
 const ROLE_LABELS: Record<string, string> = {

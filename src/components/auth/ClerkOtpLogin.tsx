@@ -203,15 +203,11 @@ export function ClerkOtpLogin({
         account?.email || email.trim().toLowerCase()
       );
       const destination =
-        role === "candidate" && effectiveRole === "student"
-          ? "/candidate/apply"
-          : effectiveRole === "administrator"
-            ? "/admin/dashboard"
-            : effectiveRole === "cad"
-              ? "/cad/dashboard"
-              : effectiveRole === "candidate"
-                ? "/candidate/dashboard"
-                : "/student/dashboard";
+        effectiveRole === "administrator"
+          ? "/admin/dashboard"
+          : effectiveRole === "cad"
+            ? "/cad/dashboard"
+            : "/student/dashboard";
 
       // Full reload so all client state (session bindings, caches) is fresh.
       window.location.replace(destination);

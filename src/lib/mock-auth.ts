@@ -35,7 +35,7 @@ export function getDashboardRoute(role: UserRole): string {
     case "student":
       return "/student/dashboard";
     case "candidate":
-      return "/candidate/dashboard";
+      return "/student/dashboard";
     case "administrator":
       return "/admin/dashboard";
     case "cad":

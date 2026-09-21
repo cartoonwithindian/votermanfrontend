@@ -138,7 +138,7 @@ export default function ClerkCallbackContent() {
         document.cookie = "cv_sid=; Max-Age=0; path=/;";
       } catch {}
       const role = new URLSearchParams(window.location.search).get("role") || "student";
-      const target = role === "candidate" ? "/candidate/login" : "/student/login";
+      const target = "/student/login";
       window.location.replace(target);
     };
     return (

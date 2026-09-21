@@ -92,7 +92,7 @@ function dashboardForBackendRole(backendRole: string | undefined): string {
     case "CAD":
       return "/cad/dashboard";
     case "CANDIDATE":
-      return "/candidate/dashboard";
+      return "/student/dashboard";
     default:
       return "/student/dashboard";
   }

@@ -108,6 +108,14 @@ export interface AdminConstituencyRecord {
   created_at?: string;
 }
 
+export interface StudentClass {
+  department: string;
+  year_or_semester: string;
+  year_normalized: string;
+  section: string;
+  student_count: number;
+}
+
 export interface AdminAnnouncementRecord {
   id: number;
   title: string;
@@ -245,10 +253,16 @@ export const adminApi = {
     api.get<{ data: AdminConstituencyRecord[] }>(`/constituencies?election_id=${electionId}&active_only=false`),
   createConstituency: (body: { election_id: number | string; department: string; year: string; section: string; name?: string }) =>
     api.post<{ data: AdminConstituencyRecord }>("/admin/constituencies", body),
+  bulkCreateConstituencies: (body: { election_id: number | string; classes: { department: string; year: string; section: string }[] }) =>
+    api.post<{ data: { created: AdminConstituencyRecord[]; skipped: Array<{ department: string; year: string; section: string; reason: string }>; total: number } }>("/admin/constituencies/bulk", body),
   updateConstituency: (id: number | string, body: { name?: string; is_active?: boolean }) =>
     api.patch<{ data: AdminConstituencyRecord }>(`/admin/constituencies/${id}`, body),
   deleteConstituency: (id: number | string) =>
     api.delete(`/admin/constituencies/${id}`),
+
+  // ---- Student classes (auto-detect from students table) ----
+  getStudentClasses: () =>
+    api.get<{ data: StudentClass[] }>("/admin/students/classes"),
 
   // ---- Candidate Applications ----
   // Get approved candidates for admin position management
