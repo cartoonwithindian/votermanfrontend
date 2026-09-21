@@ -47,8 +47,9 @@ export default function CandidateManagementPage() {
 
   // JSON override state
   const [jsonInfo, setJsonInfo] = useState<{ hasJson: boolean; count: number; candidates?: any[] } | null>(null)
-  const [jsonUploading, setJsonUploading] = useState(false)
   const [jsonError, setJsonError] = useState("")
+  const [pendingJson, setPendingJson] = useState<{ candidates: any[]; errors: { index: number; name: string; error: string }[] } | null>(null)
+  const [submitting, setSubmitting] = useState(false)
   const [ballotAdding, setBallotAdding] = useState(false)
   const [ballotAdded, setBallotAdded] = useState<{ name: string; candidateId: string; department: string; year: string; section: string; positionName: string }[]>([])
   const [removingId, setRemovingId] = useState<string | null>(null)
@@ -82,32 +83,72 @@ export default function CandidateManagementPage() {
     return window.sessionStorage.getItem("campusvote_binding_token") || ""
   }
 
+  const validateJsonFormat = (arr: any[]) => {
+    const errors: { index: number; name: string; error: string }[] = []
+    if (!Array.isArray(arr) || arr.length === 0) {
+      errors.push({ index: 0, name: "", error: "JSON must be an array or {candidates:[...]}" })
+      return errors
+    }
+    if (arr.length > 500) errors.push({ index: 0, name: "", error: "Too many candidates (max 500)" })
+    arr.forEach((c, i) => {
+      const name = c.fullName || c.FullName || c.name
+      if (!name || typeof name !== "string" || !name.trim()) return errors.push({ index: i + 1, name, error: "Full Name is required" })
+      if (!c.department || typeof c.department !== "string") return errors.push({ index: i + 1, name, error: "Department is required" })
+      if (!c.year || typeof c.year !== "string") return errors.push({ index: i + 1, name, error: "Year is required" })
+      if (!c.email || typeof c.email !== "string" || !c.email.includes("@")) return errors.push({ index: i + 1, name, error: "Email is required" })
+      if (!c.manifesto || typeof c.manifesto !== "string" || !c.manifesto.trim()) return errors.push({ index: i + 1, name, error: "Manifesto is required" })
+      const pos = c.position || c.position_name || c.Position
+      if (!pos || typeof pos !== "string" || !pos.trim()) return errors.push({ index: i + 1, name, error: "Position is required" })
+      if (c.gender && !["Male", "Female", "Other"].includes(c.gender)) return errors.push({ index: i + 1, name, error: "gender must be Male/Female/Other" })
+    })
+    return errors
+  }
+
   const handleJsonUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
     setJsonError("")
-    setJsonUploading(true)
+    setPendingJson(null)
     try {
       const text = await file.text()
       const parsed = JSON.parse(text)
       const arr = Array.isArray(parsed) ? parsed : Array.isArray(parsed.candidates) ? parsed.candidates : null
       if (!arr) throw new Error("JSON must be array or {candidates:[...]}")
+      const errors = validateJsonFormat(arr)
+      setPendingJson({ candidates: arr, errors })
+    } catch (err: any) {
+      setJsonError(err.message || "Invalid JSON")
+      setPendingJson(null)
+    } finally {
+      if (fileRef.current) fileRef.current.value = ""
+    }
+  }
+
+  const handleJsonSubmit = async () => {
+    if (!pendingJson) return
+    if (pendingJson.errors.length > 0) {
+      setJsonError("Fix the format errors below before submitting")
+      return
+    }
+    setSubmitting(true)
+    setJsonError("")
+    try {
       const csrf = await fetchCsrf()
       const res = await fetch(`${API_BASE}/admin/candidates/json`, {
         method: "POST",
         credentials: "include",
         headers: { "Content-Type": "application/json", "X-CSRF-Token": csrf, "X-Session-Binding": getBindingToken() },
-        body: JSON.stringify({ candidates: arr }),
+        body: JSON.stringify({ candidates: pendingJson.candidates }),
       })
       const body = await res.json().catch(() => ({}))
       if (!res.ok) throw new Error(body.message || "Upload failed")
       showToast(`JSON uploaded: ${body.count} candidates — students now see JSON (cohort-filtered)`, "success")
+      setPendingJson(null)
       fetchJsonInfo()
     } catch (err: any) {
-      setJsonError(err.message || "Invalid JSON")
+      setJsonError(err.message || "Upload failed")
     } finally {
-      setJsonUploading(false)
-      if (fileRef.current) fileRef.current.value = ""
+      setSubmitting(false)
     }
   }
 
@@ -285,13 +326,60 @@ export default function CandidateManagementPage() {
             </div>
             <div className="flex items-center gap-2">
               <input ref={fileRef} type="file" accept=".json,application/json" onChange={handleJsonUpload} className="hidden" />
-              <Button variant="primary" size="sm" className="gap-1.5" isLoading={jsonUploading} onClick={() => fileRef.current?.click()}><Upload className="w-4 h-4" />Upload JSON</Button>
+              <Button variant="primary" size="sm" className="gap-1.5" onClick={() => fileRef.current?.click()}><Upload className="w-4 h-4" />Upload JSON</Button>
               {jsonInfo?.hasJson && <Button variant="outline" size="sm" className="gap-1.5 text-error-600" onClick={handleJsonDelete}><Trash2 className="w-4 h-4" />Remove JSON</Button>}
               {jsonInfo?.hasJson && <Button variant="primary" size="sm" className="gap-1.5" isLoading={ballotAdding} onClick={handleAddToBallot}><ListChecks className="w-4 h-4" />Add to Ballot</Button>}
             </div>
+            <p className="text-xs text-text-muted mt-2 w-full">Pick a file first — the page checks the JSON format and shows a preview. Fix any errors, then press <strong>Submit</strong> to activate it.</p>
           </div>
           {jsonInfo?.hasJson && <p className="text-xs text-success-700 mt-3">✓ JSON active — <code>candidateService.js:25 findApproved()</code> now serves JSON (filtered by <code>candidateController.js:38 hasOwnClass</code>). Delete the JSON to revert to the previous ballot rows.</p>}
           {jsonError && <p className="text-xs text-error-600 mt-2">{jsonError}</p>}
+          {pendingJson && (
+            <div className="mt-4 border border-primary-200 rounded-lg p-4">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div>
+                  <h3 className="text-sm font-semibold text-text-primary">JSON Format Check</h3>
+                  <p className="text-xs text-text-secondary mt-0.5">
+                    {pendingJson.candidates.length} candidate(s) parsed — {pendingJson.errors.length} format error(s). Review below, then submit.
+                  </p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Button variant="outline" size="sm" onClick={() => setPendingJson(null)}><X className="w-4 h-4" />Cancel</Button>
+                  <Button variant="primary" size="sm" className="gap-1.5" isLoading={submitting} disabled={pendingJson.errors.length > 0} onClick={handleJsonSubmit}><Upload className="w-4 h-4" />Submit {pendingJson.candidates.length} Candidates</Button>
+                </div>
+              </div>
+              {pendingJson.errors.length > 0 && (
+                <div className="mt-3 rounded-lg bg-error-50 dark:bg-error-950 p-3">
+                  <p className="text-xs font-semibold text-error-700 mb-1.5">Fix these before uploading — format must match: <code>{`{fullName, position, department, year, section, email, profilePhotoUrl, manifesto}`}</code></p>
+                  <ul className="space-y-1 max-h-40 overflow-y-auto">
+                    {pendingJson.errors.map((e, i) => (
+                      <li key={i} className="text-xs text-error-600 font-mono">#{e.index} {e.name ? `${e.name}: ` : ""}{e.error}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+              <div className="mt-3 overflow-x-auto">
+                <table className="w-full text-xs">
+                  <thead><tr className="border-b border-border"><th className="text-left px-2 py-1">#</th><th className="text-left px-2 py-1">Full Name</th><th className="text-left px-2 py-1">Position</th><th className="text-left px-2 py-1">Dept</th><th className="text-left px-2 py-1">Year</th><th className="text-left px-2 py-1">Sec</th><th className="text-left px-2 py-1">Email</th><th className="text-left px-2 py-1">Status</th></tr></thead>
+                  <tbody>{pendingJson.candidates.map((c: any, i: number) => {
+                    const err = pendingJson.errors.find((e) => e.index === i + 1)
+                    return (
+                      <tr key={i} className="border-b border-border/50">
+                        <td className="px-2 py-1 font-mono">{i + 1}</td>
+                        <td className="px-2 py-1">{c.fullName || c.FullName || c.name}</td>
+                        <td className="px-2 py-1">{c.position || c.position_name || c.Position}</td>
+                        <td className="px-2 py-1">{c.department}</td>
+                        <td className="px-2 py-1">{c.year}</td>
+                        <td className="px-2 py-1">{c.section || "—"}</td>
+                        <td className="px-2 py-1 truncate max-w-[140px]">{c.email || c.Email}</td>
+                        <td className="px-2 py-1">{err ? <span className="text-error-600 font-semibold">Invalid</span> : <span className="text-success-600 font-semibold">✓ Valid</span>}</td>
+                      </tr>
+                    )
+                  })}</tbody>
+                </table>
+              </div>
+            </div>
+          )}
           {jsonInfo && !jsonInfo.hasJson && <p className="text-xs text-text-muted mt-2">No JSON override — students see DB approved candidates.</p>}
           {jsonInfo?.hasJson && jsonInfo.candidates && jsonInfo.candidates.length > 0 && (
             <div className="mt-4 border-t border-primary-200 pt-4">
