@@ -50,13 +50,16 @@ export const metadata: Metadata = {
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
+  // Detect satellite vs primary at runtime (server component can check headers via env)
+  // s1.student.made-a.tech is satellite (is_satellite:true, clerk.s1...), student.made-a.tech is primary
+  const isSatellite = process.env.NEXT_PUBLIC_CLERK_IS_SATELLITE === 'true';
   return (
     <html lang="en" className={`${poppins.variable} h-full antialiased`}>
       <body className="min-h-full flex flex-col font-sans">
         {/* Guarded: the app falls back to backend email-OTP auth when no Clerk
             key is configured (e.g. fresh clones before `clerk env pull`). */}
         {clerkKey ? (
-          <ClerkProvider allowedRedirectOrigins={allowedRedirectOrigins}>{children}</ClerkProvider>
+          <ClerkProvider allowedRedirectOrigins={allowedRedirectOrigins} isSatellite={isSatellite ? { domain: 's1.student.made-a.tech' } : undefined}>{children}</ClerkProvider>
         ) : (
           children
         )}
