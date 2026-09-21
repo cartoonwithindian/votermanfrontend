@@ -12,40 +12,40 @@ const poppins = Poppins({
 
 const clerkKey = process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY;
 
-// Primary-domain deployments allow visible satellite origins to redirect back
-// after auth (multi-domain, e.g. students.made-a.tech -> made-a.tech).
-// s1.students.made-a.tech is Clerk's satellite/JWKS host (clerk.s1...) but users
-// mistakenly open https://s1.students.made-a.tech/admin/... as the app. Allow
-// it explicitly so Clerk doesn't reject the origin when the request Host is s1.
-// Env NEXT_PUBLIC_CLERK_ALLOWED_REDIRECT_ORIGINS adds more hosts.
-//
-// The Clerk custom domain comes from NEXT_PUBLIC_CLERK_APP_DOMAIN (set in the
-// env file); the satellite clerk.s1.<host> is derived from it. Defaults keep
-// clerk.students.made-a.tech for existing deployments.
-const clerkAppDomain = process.env.NEXT_PUBLIC_CLERK_APP_DOMAIN || "clerk.students.made-a.tech";
-const clerkS1Domain =
-  process.env.NEXT_PUBLIC_CLERK_APP_DOMAIN_S1 ||
-  `clerk.s1.${clerkAppDomain.split(".").slice(1).join(".")}`;
-const builtinAllowedRedirectOrigins = [
-  "https://students.made-a.tech",
-  "https://s1.students.made-a.tech",
-  `https://${clerkAppDomain}`,
-  `https://${clerkS1Domain}`,
-  "https://votermanfrontend.onrender.com",
-  "https://votermanbackend.onrender.com",
-];
+// Clerk's allowedRedirectOrigins: which origins Clerk may redirect back to
+// after auth. Nothing is hardcoded — every-origin is gathered from env:
+//   - NEXT_PUBLIC_APP_URL                    canonical app URL
+//   - NEXT_PUBLIC_APP_URL_S1                 optional secondary app URL
+//   - NEXT_PUBLIC_CLERK_APP_DOMAIN           Clerk custom front-end API domain
+//   - NEXT_PUBLIC_CLERK_APP_DOMAIN_S1        optional secondary Clerk domain
+//   - NEXT_PUBLIC_CLERK_ALLOWED_REDIRECT_ORIGINS  extra origins (comma-separated, host or https://host)
+//   - NEXT_PUBLIC_ALT_HOSTS                  extra hosts to allow (comma-separated, host or https://host)
+const appUrl = (process.env.NEXT_PUBLIC_APP_URL || "").replace(/\/+$/, "");
+const appUrlS1 = (process.env.NEXT_PUBLIC_APP_URL_S1 || "").replace(/\/+$/, "");
+const clerkAppDomain = (process.env.NEXT_PUBLIC_CLERK_APP_DOMAIN || "").replace(/^https?:\/\//, "");
+const clerkS1Domain = (process.env.NEXT_PUBLIC_CLERK_APP_DOMAIN_S1 || "").replace(/^https?:\/\//, "");
+const envRedirectOrigins = (process.env.NEXT_PUBLIC_CLERK_ALLOWED_REDIRECT_ORIGINS || "")
+  .split(",")
+  .map((s) => s.trim())
+  .filter(Boolean);
+const altHosts = (process.env.NEXT_PUBLIC_ALT_HOSTS || "")
+  .split(",")
+  .map((s) => s.trim())
+  .filter(Boolean);
+const derivedOrigins = [
+  appUrl,
+  appUrlS1,
+  clerkAppDomain && `https://${clerkAppDomain}`,
+  clerkS1Domain && `https://${clerkS1Domain}`,
+  ...altHosts,
+  ...envRedirectOrigins,
+].filter(Boolean) as string[];
 const allowedRedirectOrigins = Array.from(
   new Set(
-    [
-      ...builtinAllowedRedirectOrigins,
-      ...(process.env.NEXT_PUBLIC_CLERK_ALLOWED_REDIRECT_ORIGINS || "")
-        .split(",")
-        .map((s) => s.trim())
-        .filter(Boolean),
-    ].flatMap((origin) => {
+    derivedOrigins.flatMap((origin) => {
       // Clerk's allowedRedirectOrigins accepts hosts with scheme; also accept
-      // host-only values from env (e.g. "s1.students.made-a.tech") by adding
-      // https:// prefix.
+      // host-only values from env (e.g. "app.example.com") by adding https://
+      // (and http://) prefixes.
       if (/^https?:\/\//.test(origin)) return [origin];
       return [`https://${origin}`, `http://${origin}`];
     })

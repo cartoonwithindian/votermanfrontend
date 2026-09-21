@@ -6,23 +6,27 @@ const hasClerkKey = Boolean(process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY);
 const IS_STUDENT_PORTAL_CLOSED =
   process.env.NEXT_PUBLIC_STUDENT_PORTAL_CLOSED === "true";
 
-// Canonical app host is students.made-a.tech. The Clerk s1 subdomain
-// (clerk.s1.students.made-a.tech) serves the JWKS + Frontend API; its bare
-// `s1.students.made-a.tech` host is NOT the app host, but Render may route
-// it to the same service if s1 is added as a custom domain. Users hitting
-// https://s1.students.made-a.tech/admin/... would then see the app under the
-// wrong host: the live publishable key encodes the Clerk custom domain set by
-// NEXT_PUBLIC_CLERK_APP_DOMAIN (default clerk.students.made-a.tech), not s1, so
-// Clerk's FAPI cookies / session verification mismatches and the UI can 500.
-// Handle gracefully either by canonicalising (preferred) or by allowing the
-// host and degrading.
-const CANONICAL_HOST = "students.made-a.tech";
-const S1_HOSTS = new Set(["s1.students.made-a.tech", "clerk.s1.students.made-a.tech"]);
-const CANONICAL_REDIRECT = process.env.S1_CANONICAL_REDIRECT !== "false"; // set "false" to serve s1 directly without redirect
+// Canonical redirect for secondary hosts. Everything is env-driven so the app
+// works on any deployment without hardcoding a domain:
+//   - NEXT_PUBLIC_APP_URL     canonical app URL (e.g. https://app.example.com)
+//   - NEXT_PUBLIC_ALT_HOSTS   comma-separated secondary hosts to 308-redirect
+//                             to the canonical host (host, with or without scheme)
+// When NEXT_PUBLIC_ALT_HOSTS is unset no canonical redirect happens.
+const canonicalHost = (process.env.NEXT_PUBLIC_APP_URL || "")
+  .replace(/^https?:\/\//, "")
+  .replace(/\/.*$/, "")
+  .split(":")[0]
+  .toLowerCase();
+const altHosts = (process.env.NEXT_PUBLIC_ALT_HOSTS || "")
+  .split(",")
+  .map((h) => h.trim().replace(/^https?:\/\//, "").split(":")[0].toLowerCase())
+  .filter(Boolean);
+const S1_HOSTS = new Set(altHosts);
+const CANONICAL_REDIRECT = process.env.S1_CANONICAL_REDIRECT !== "false"; // set "false" to serve secondary hosts directly without redirect
 
 function maybeCanonicalRedirect(request: NextRequest): NextResponse | null {
   const host = (request.headers.get("host") || "").split(":")[0].toLowerCase();
-  if (!S1_HOSTS.has(host)) return null;
+  if (!canonicalHost || S1_HOSTS.size === 0 || !S1_HOSTS.has(host)) return null;
   // Don't redirect API / Next internals — they are same-origin XHR proxied to
   // BACKEND_API_ORIGIN via next.config rewrites; a redirect would add latency.
   const { pathname } = request.nextUrl;
@@ -30,7 +34,7 @@ function maybeCanonicalRedirect(request: NextRequest): NextResponse | null {
   if (!CANONICAL_REDIRECT) return null;
   const url = request.nextUrl.clone();
   url.protocol = "https:";
-  url.host = CANONICAL_HOST;
+  url.host = canonicalHost;
   url.port = "";
   return NextResponse.redirect(url, 308);
 }
@@ -114,10 +118,10 @@ function appProxy(request: NextRequest) {
  *
  * Without a Clerk key, only the plain app proxy runs (backend OTP flow).
  *
- * s1 safety: clerkMiddleware can throw when the request Host (s1...) does
- * not match the publishable key's domain (students.made-a.tech). Wrap so an
- * s1 request never 500s — fall back to the plain proxy which still serves
- * the page via the backend OTP flow.
+ * s1 safety: clerkMiddleware can throw when the request Host (a non-canonical
+ * host) does not match the publishable key's domain. Wrap so such a request
+ * never 500s — fall back to the plain proxy which still serves the page via
+ * the backend OTP flow.
  */
 const clerkHandler = hasClerkKey ? clerkMiddleware(async (_auth, req) => appProxy(req)) : null;
 

@@ -22,6 +22,8 @@ const API_BASE = (process.env.NEXT_PUBLIC_API_URL || "/api/v1").replace(/\/$/, "
 // Same flag as RootLayout: ClerkProvider only wraps the app when a key exists.
 const CLERK_ENABLED = !!process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY;
 
+const APP_ORIGIN = (process.env.NEXT_PUBLIC_APP_URL || "").replace(/\/+$/, "");
+
 type Portal = "student" | "candidate";
 type Mode = "login" | "register";
 
@@ -728,7 +730,7 @@ export function UnifiedAuthPage({
               <p className="text-xs font-bold text-amber-800 leading-none">For Candidate Nomination</p>
               <p className="text-xs text-amber-700 mt-1">Click this link to apply as a candidate:</p>
               <a href="/candidate/login" className="inline-flex items-center gap-1.5 mt-1.5 text-xs font-semibold text-amber-800 underline decoration-amber-300 underline-offset-2 hover:text-amber-900 break-all">
-                https://made-a.tech/candidate/login
+                {APP_ORIGIN ? `${APP_ORIGIN}/candidate/login` : "/candidate/login"}
               </a>
             </div>
           </div>
