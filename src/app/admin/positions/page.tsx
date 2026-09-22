@@ -11,18 +11,20 @@ import {
   RefreshCw,
   Users,
   Inbox,
+  Pencil,
+  X,
 } from "lucide-react";
 
 // Approved CR application (matches backend ApprovedCandidateRow)
 interface CRCandidate {
-  id: number;
-  student_id: number;
+  id: number | string;
+  student_id: number | string | null;
   full_name: string;
   gender: string;
   department: string;
   year: string;
   section: string | null;
-  position_id: number | null;
+  position_id: number | string | null;
   position_name: string | null;
   category: string;
   photo: string | null;
@@ -55,6 +57,12 @@ export default function PositionsPage() {
   const [filterClass, setFilterClass] = useState("all");
   const [filterSection, setFilterSection] = useState("all");
 
+  // Edit candidate modal
+  const [editing, setEditing] = useState<CRCandidate | null>(null);
+  const [editForm, setEditForm] = useState({ full_name: "", photo: "", manifesto: "" });
+  const [saving, setSaving] = useState(false);
+  const [editError, setEditError] = useState("");
+
   const load = useCallback(async () => {
     try {
       setLoading(true);
@@ -75,6 +83,41 @@ export default function PositionsPage() {
   useEffect(() => {
     load();
   }, [load]);
+
+  const openEdit = (c: CRCandidate) => {
+    setEditing(c);
+    setEditForm({ full_name: c.full_name, photo: c.photo || "", manifesto: "" });
+    setEditError("");
+  };
+
+  const closeEdit = () => {
+    setEditing(null);
+    setSaving(false);
+    setEditError("");
+  };
+
+  const saveEdit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editing || !editForm.full_name.trim()) {
+      setEditError("Candidate name is required");
+      return;
+    }
+    setSaving(true);
+    setEditError("");
+    try {
+      await api.patch(`/admin/candidates/${editing.id}`, {
+        name: editForm.full_name.trim(),
+        image_url: editForm.photo.trim() || null,
+        description: editForm.manifesto.trim() || null,
+      });
+      closeEdit();
+      await load();
+    } catch (err) {
+      setEditError(err instanceof Error ? err.message : "Failed to update candidate");
+    } finally {
+      setSaving(false);
+    }
+  };
 
   const uniqueClasses = useMemo(
     () => [...new Set(candidates.map((c) => c.department).filter(Boolean))].sort(),
@@ -245,11 +288,20 @@ export default function PositionsPage() {
                                     {c.full_name}
                                   </span>
                                 </div>
-                                {c.position_id ? (
-                                  <Badge variant="info" className="shrink-0">On ballot</Badge>
-                                ) : (
-                                  <Badge variant="neutral" className="shrink-0">Not placed</Badge>
-                                )}
+                                <div className="flex items-center gap-2 shrink-0">
+                                  {c.position_id ? (
+                                    <Badge variant="info" className="shrink-0">On ballot</Badge>
+                                  ) : (
+                                    <Badge variant="neutral" className="shrink-0">Not placed</Badge>
+                                  )}
+                                  <button
+                                    onClick={() => openEdit(c)}
+                                    className="p-1.5 rounded-lg text-gray-500 hover:bg-blue-50 hover:text-blue-600 transition-colors"
+                                    title="Edit candidate"
+                                  >
+                                    <Pencil className="w-4 h-4" />
+                                  </button>
+                                </div>
                               </li>
                             ))}
                           </ul>
@@ -270,6 +322,70 @@ export default function PositionsPage() {
           </Card>
         )}
       </div>
+
+      {editing && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          <div className="absolute inset-0 bg-black/40" onClick={closeEdit} />
+          <div className="relative bg-white rounded-2xl shadow-2xl max-w-lg w-full mx-4 p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-semibold text-gray-900">Edit Candidate</h2>
+              <button onClick={closeEdit} className="p-1 hover:bg-gray-100 rounded-lg transition-colors">
+                <X className="w-5 h-5 text-gray-500" />
+              </button>
+            </div>
+            <form onSubmit={saveEdit} className="space-y-4">
+              <div>
+                <label className="text-xs font-medium text-gray-500 uppercase tracking-wide block mb-1">
+                  Full Name
+                </label>
+                <input
+                  type="text"
+                  value={editForm.full_name}
+                  onChange={(e) => setEditForm((f) => ({ ...f, full_name: e.target.value }))}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+              <div>
+                <label className="text-xs font-medium text-gray-500 uppercase tracking-wide block mb-1">
+                  Photo URL
+                </label>
+                <input
+                  type="text"
+                  value={editForm.photo}
+                  onChange={(e) => setEditForm((f) => ({ ...f, photo: e.target.value }))}
+                  placeholder="https://..."
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+                {editing.photo && (
+                  <img src={editing.photo} alt={editing.full_name} className="mt-2 w-12 h-12 rounded-full object-cover border border-gray-200" />
+                )}
+              </div>
+              <div>
+                <label className="text-xs font-medium text-gray-500 uppercase tracking-wide block mb-1">
+                  Manifesto
+                </label>
+                <textarea
+                  value={editForm.manifesto}
+                  onChange={(e) => setEditForm((f) => ({ ...f, manifesto: e.target.value }))}
+                  rows={6}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+                />
+              </div>
+              {editError && (
+                <p className="text-sm text-red-600">{editError}</p>
+              )}
+              <div className="flex justify-end gap-3 pt-2">
+                <Button variant="outline" type="button" onClick={closeEdit}>
+                  Cancel
+                </Button>
+                <Button type="submit" isLoading={saving}>
+                  Save Changes
+                </Button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </AdminLayout>
   );
 }

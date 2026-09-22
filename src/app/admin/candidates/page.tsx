@@ -23,6 +23,7 @@ import {
   FileJson,
   ListChecks,
   Trash2,
+  Pencil,
 } from "lucide-react"
 import { useState, useMemo, useEffect, useRef } from "react"
 import { COURSES } from "@/lib/class-data"
@@ -44,6 +45,12 @@ export default function CandidateManagementPage() {
   const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null)
 
   const [approveError, setApproveError] = useState("")
+
+  // Edit candidate (name/photo/manifesto) — PATCH /admin/candidates/:id
+  const [showEditModal, setShowEditModal] = useState(false)
+  const [editForm, setEditForm] = useState({ name: "", photo: "", manifesto: "" })
+  const [savingEdit, setSavingEdit] = useState(false)
+  const [editError, setEditError] = useState("")
 
   // JSON override state
   const [jsonInfo, setJsonInfo] = useState<{ hasJson: boolean; count: number; candidates?: any[] } | null>(null)
@@ -258,6 +265,47 @@ export default function CandidateManagementPage() {
   const openReview = (candidate: any) => {
     setSelectedCandidate(candidate)
     setShowPanel(true)
+  }
+
+  const openEdit = (candidate: any) => {
+    setSelectedCandidate(candidate)
+    setEditForm({ name: candidate.name || "", photo: candidate.photo || "", manifesto: candidate.manifesto || "" })
+    setEditError("")
+    setShowEditModal(true)
+  }
+
+  const closeEdit = () => {
+    setShowEditModal(false)
+    setEditError("")
+    setSavingEdit(false)
+  }
+
+  const saveEdit = async () => {
+    if (!selectedCandidate || !editForm.name.trim()) {
+      setEditError("Candidate name is required")
+      return
+    }
+    setSavingEdit(true)
+    setEditError("")
+    try {
+      const csrf = await fetchCsrf()
+      const res = await fetch(`${API_BASE}/admin/candidates/${selectedCandidate.id}`, {
+        method: "PATCH",
+        credentials: "include",
+        headers: { "Content-Type": "application/json", "X-CSRF-Token": csrf, "X-Session-Binding": getBindingToken() },
+        body: JSON.stringify({ name: editForm.name.trim(), image_url: editForm.photo.trim() || null, description: editForm.manifesto.trim() || null }),
+      })
+      const body = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(body.message || "Update failed")
+      showToast(`${editForm.name.trim()} updated`, "success")
+      closeEdit()
+      getAllApplications().then(setCandidates).catch(() => {})
+      fetchJsonInfo()
+    } catch (err: any) {
+      setEditError(err.message || "Update failed")
+    } finally {
+      setSavingEdit(false)
+    }
   }
 
   const closeReview = () => {
@@ -516,14 +564,24 @@ export default function CandidateManagementPage() {
                           {candidate.submittedDate || "—"}
                         </td>
                         <td className="px-4 py-3">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => openReview(candidate)}
-                          >
-                            <Eye className="h-4 w-4 mr-1" />
-                            Review
-                          </Button>
+                          <div className="flex items-center gap-2">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => openReview(candidate)}
+                            >
+                              <Eye className="h-4 w-4 mr-1" />
+                              Review
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => openEdit(candidate)}
+                            >
+                              <Pencil className="h-4 w-4 mr-1" />
+                              Edit
+                            </Button>
+                          </div>
                         </td>
                       </tr>
                     ))}
@@ -813,6 +871,62 @@ export default function CandidateManagementPage() {
                   disabled={!changesText.trim()}
                 >
                   Send
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {showEditModal && selectedCandidate && (
+          <div className="fixed inset-0 z-[60] flex items-center justify-center">
+            <div className="absolute inset-0 bg-black/50" onClick={closeEdit} />
+            <div className="relative bg-white dark:bg-[#252540] rounded-xl shadow-2xl max-w-lg w-full mx-4 p-6 space-y-4">
+              <div className="flex items-center justify-between">
+                <h3 className="text-lg font-semibold text-text-primary">Edit Candidate</h3>
+                <button onClick={closeEdit} className="p-1 hover:bg-bg-tertiary rounded">
+                  <X className="h-5 w-5 text-text-muted" />
+                </button>
+              </div>
+              <div className="space-y-3">
+                <div>
+                  <label className="text-xs font-medium text-text-secondary uppercase tracking-wide block mb-1">Full Name</label>
+                  <input
+                    type="text"
+                    value={editForm.name}
+                    onChange={(e) => setEditForm((f) => ({ ...f, name: e.target.value }))}
+                    className="w-full border border-border rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-text-secondary uppercase tracking-wide block mb-1">Photo URL</label>
+                  <input
+                    type="text"
+                    value={editForm.photo}
+                    onChange={(e) => setEditForm((f) => ({ ...f, photo: e.target.value }))}
+                    placeholder="https://..."
+                    className="w-full border border-border rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  />
+                  {selectedCandidate.photo && (
+                    <img src={selectedCandidate.photo} alt={selectedCandidate.name} className="mt-2 w-12 h-12 rounded-full object-cover border border-border" />
+                  )}
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-text-secondary uppercase tracking-wide block mb-1">Manifesto</label>
+                  <textarea
+                    value={editForm.manifesto}
+                    onChange={(e) => setEditForm((f) => ({ ...f, manifesto: e.target.value }))}
+                    rows={6}
+                    className="w-full border border-border rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 resize-none"
+                  />
+                </div>
+              </div>
+              {editError && <p className="text-sm text-error-600">{editError}</p>}
+              <div className="flex justify-end gap-3 pt-2">
+                <Button variant="outline" onClick={closeEdit}>
+                  Cancel
+                </Button>
+                <Button isLoading={savingEdit} onClick={saveEdit}>
+                  Save Changes
                 </Button>
               </div>
             </div>
