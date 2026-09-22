@@ -15,6 +15,7 @@ export function MyCandidacyEditor({ onUpdated }: MyCandidacyEditorProps) {
   const [candidacy, setCandidacy] = useState<MyCandidacy | null>(null);
   const [checked, setChecked] = useState(false);
   const [manifesto, setManifesto] = useState("");
+  const [bio, setBio] = useState("");
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -28,6 +29,7 @@ export function MyCandidacyEditor({ onUpdated }: MyCandidacyEditorProps) {
         if (!alive) return;
         setCandidacy(c);
         setManifesto(c.manifesto || "");
+        setBio(c.bio || "");
         setChecked(true);
       })
       .catch(() => {
@@ -52,15 +54,16 @@ export function MyCandidacyEditor({ onUpdated }: MyCandidacyEditorProps) {
     setError(null);
     setSaved(false);
     try {
-      const updated = await studentApi.updateMyManifesto(text);
-      setCandidacy((prev) => (prev ? { ...prev, manifesto: updated.manifesto } : prev));
+      const updated = await studentApi.updateMyCandidacyContent({ manifesto: text, bio: bio.trim() || undefined });
+      setCandidacy((prev) => (prev ? { ...prev, manifesto: updated.manifesto, bio: updated.bio } : prev));
       setManifesto(updated.manifesto);
+      setBio(updated.bio || "");
       setIsEditing(false);
       setSaved(true);
       onUpdated?.();
       window.setTimeout(() => setSaved(false), 3000);
     } catch {
-      setError("Failed to save your manifesto. Please try again.");
+      setError("Failed to save your candidacy details. Please try again.");
     } finally {
       setIsSaving(false);
     }
@@ -85,6 +88,9 @@ export function MyCandidacyEditor({ onUpdated }: MyCandidacyEditorProps) {
 
           {!isEditing ? (
             <div className="mt-2">
+              {candidacy.bio && (
+                <p className="text-sm text-text-primary whitespace-pre-wrap mb-2">{candidacy.bio}</p>
+              )}
               <p className="text-sm text-text-secondary whitespace-pre-wrap">
                 {candidacy.manifesto || "No manifesto yet."}
               </p>
@@ -98,12 +104,23 @@ export function MyCandidacyEditor({ onUpdated }: MyCandidacyEditorProps) {
                 }}
               >
                 <Pencil className="w-3.5 h-3.5" />
-                Edit My Manifesto
+                Edit My Candidacy
               </Button>
             </div>
           ) : (
             <div className="mt-3">
               <label className="block text-xs font-medium text-text-secondary mb-1.5">
+                Your bio — short intro shown on your candidate card
+              </label>
+              <textarea
+                value={bio}
+                onChange={(e) => setBio(e.target.value)}
+                rows={3}
+                maxLength={1000}
+                className="w-full rounded-xl border border-border bg-white dark:bg-[#1e1e38] px-3 py-2.5 text-sm text-text-primary focus:outline-none focus:ring-2 focus:ring-primary-500 resize-y"
+                placeholder="A quick intro about yourself..."
+              />
+              <label className="block text-xs font-medium text-text-secondary mb-1.5 mt-3">
                 Your manifesto — shown to voters on your candidate card
               </label>
               <textarea
@@ -123,13 +140,13 @@ export function MyCandidacyEditor({ onUpdated }: MyCandidacyEditorProps) {
               {saved && (
                 <p className="mt-1.5 flex items-center gap-1.5 text-xs text-success-600">
                   <CheckCircle2 className="w-3.5 h-3.5" />
-                  Manifesto saved.
+                  Candidacy details saved.
                 </p>
               )}
               <div className="mt-3 flex items-center gap-2">
                 <Button variant="primary" size="sm" className="gap-1.5" onClick={save} disabled={isSaving}>
                   {isSaving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
-                  {isSaving ? "Saving..." : "Save Manifesto"}
+                  {isSaving ? "Saving..." : "Save Candidacy"}
                 </Button>
                 <Button
                   variant="ghost"
@@ -137,6 +154,7 @@ export function MyCandidacyEditor({ onUpdated }: MyCandidacyEditorProps) {
                   onClick={() => {
                     setIsEditing(false);
                     setManifesto(candidacy.manifesto || "");
+                    setBio(candidacy.bio || "");
                     setError(null);
                   }}
                   disabled={isSaving}

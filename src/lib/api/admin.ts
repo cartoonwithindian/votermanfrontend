@@ -78,6 +78,7 @@ export interface AdminStudentRecord {
   applied_department?: string | null;
   applied_year?: string | null;
   applied_section?: string | null;
+  profile_image_url?: string | null;
 }
 
 export interface AdminElectionRecord {
@@ -166,7 +167,7 @@ export const adminApi = {
     api.post<{ data: AdminStudentRecord }>("/admin/students", body),
 
   // Update a student (PATCH /admin/students/:id) — voting eligibility + role management
-  updateStudent: (id: number, patch: { voting_eligible?: boolean; role?: string; name?: string; email?: string | null; department?: string; year_or_semester?: string; section?: string | null }) =>
+  updateStudent: (id: number, patch: { voting_eligible?: boolean; role?: string; name?: string; email?: string | null; department?: string; year_or_semester?: string; section?: string | null; profile_image_url?: string | null }) =>
     api.patch<{ data: AdminStudentRecord }>(`/admin/students/${id}`, patch),
 
   // Deactivate/activate student status (PATCH /admin/students/:id/status)

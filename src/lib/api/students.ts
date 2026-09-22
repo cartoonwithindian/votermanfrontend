@@ -43,6 +43,7 @@ export interface MyCandidacy {
   gender: string | null;
   image_url: string | null;
   manifesto: string;
+  bio: string;
 }
 
 export const studentApi = {
@@ -59,6 +60,6 @@ export const studentApi = {
   getActiveSessions: () => api.get<ActiveSession[]>("/students/sessions"),
   deleteSession: (id: string) => api.delete(`/students/sessions/${id}`),
   getMyCandidacy: () => api.get<MyCandidacy>("/students/me/candidacy"),
-  updateMyManifesto: (manifesto: string) =>
-    api.patch<MyCandidacy>("/students/me/candidacy", { manifesto }),
+  updateMyCandidacyContent: (data: { manifesto: string; bio?: string }) =>
+    api.patch<MyCandidacy>("/students/me/candidacy", data),
 };

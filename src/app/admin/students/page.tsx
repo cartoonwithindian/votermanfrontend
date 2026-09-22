@@ -1,7 +1,7 @@
 "use client";
 
-import React, { useState, useMemo, useEffect } from "react";
-import { Search, Eye, X, Shield, AlertTriangle, RefreshCw, Info, Plus, Trash2, Vote, CheckCircle2 } from "lucide-react";
+import React, { useState, useMemo, useEffect, useRef } from "react";
+import { Search, Eye, X, Shield, AlertTriangle, RefreshCw, Info, Plus, Trash2, Vote, CheckCircle2, Upload, Camera, Pencil } from "lucide-react";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
@@ -57,6 +57,17 @@ export default function StudentsPage() {
   const [createError, setCreateError] = useState("");
   const [creating, setCreating] = useState(false);
   const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
+  const [editName, setEditName] = useState("");
+  const [editEmail, setEditEmail] = useState("");
+  const [editingName, setEditingName] = useState(false);
+  const [editingEmail, setEditingEmail] = useState(false);
+  const [uploadingImage, setUploadingImage] = useState(false);
+  const profileInputRef = useRef<HTMLInputElement | null>(null);
+
+  const showToast = (message: string, type: "success" | "error" = "success") => {
+    setToast({ message, type });
+    setTimeout(() => setToast(null), 3000);
+  };
 
   const patchStudent = async (
     id: number,
@@ -66,6 +77,9 @@ export default function StudentsPage() {
       department?: string;
       year_or_semester?: string;
       section?: string | null;
+      name?: string;
+      email?: string | null;
+      profile_image_url?: string | null;
     }
   ) => {
     setSaving(true);
@@ -78,15 +92,58 @@ export default function StudentsPage() {
       if (selectedStudent?.id === id) {
         setSelectedStudent((prev) => (prev ? { ...prev, ...(updated ?? patch) } : prev));
       }
+      showToast(patch.profile_image_url !== undefined || patch.name !== undefined || patch.email !== undefined ? "Student details updated" : "Student updated", "success");
     } catch (e) {
       setError(e instanceof Error ? e.message : "Update failed. Please try again.");
+      showToast(e instanceof Error ? e.message : "Update failed. Please try again.", "error");
     }
     setSaving(false);
   };
 
-  const showToast = (message: string, type: "success" | "error" = "success") => {
-    setToast({ message, type });
-    setTimeout(() => setToast(null), 3000);
+  const saveNameEdit = async () => {
+    if (!selectedStudent) return;
+    const trimmed = editName.trim();
+    if (!trimmed) {
+      showToast("Name cannot be empty", "error");
+      return;
+    }
+    await patchStudent(selectedStudent.id, { name: trimmed });
+    setEditingName(false);
+  };
+
+  const saveEmailEdit = async () => {
+    if (!selectedStudent) return;
+    const trimmed = editEmail.trim();
+    if (trimmed && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed)) {
+      showToast("Invalid email format", "error");
+      return;
+    }
+    await patchStudent(selectedStudent.id, { email: trimmed || null });
+    setEditingEmail(false);
+  };
+
+  const handleProfileImage = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !selectedStudent) return;
+    setUploadingImage(true);
+    try {
+      const dataUrl = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(String(reader.result));
+        reader.onerror = () => reject(new Error("Could not read file"));
+        reader.readAsDataURL(file);
+      });
+      const res: any = await api.post("/uploads/profile", { image: dataUrl });
+      const url = res?.data?.url ?? res?.url;
+      if (!url) throw new Error("Upload failed");
+      await patchStudent(selectedStudent.id, { profile_image_url: url });
+      showToast("Profile image updated", "success");
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : "Upload failed", "error");
+    } finally {
+      setUploadingImage(false);
+      if (profileInputRef.current) profileInputRef.current.value = "";
+    }
   };
 
   const handleCreate = async (e: React.FormEvent) => {
@@ -414,10 +471,93 @@ export default function StudentsPage() {
         <Modal isOpen={!!selectedStudent} onClose={() => setSelectedStudent(null)} title="Student Details">
           {selectedStudent && (
             <div className="space-y-5">
-              <div className="space-y-1">
-                <p className="font-mono text-xs text-text-muted">{selectedStudent.displayId}</p>
-                <p className="text-lg font-bold text-text-primary">{selectedStudent.name || "—"}</p>
-                <p className="text-sm text-text-secondary">{selectedStudent.email || "No email on record"}</p>
+              <div className="flex items-start gap-4">
+                <div className="flex-shrink-0">
+                  <div className="relative">
+                    {selectedStudent.profile_image_url ? (
+                      <img
+                        src={selectedStudent.profile_image_url}
+                        alt={selectedStudent.name || "Student"}
+                        className="w-16 h-16 rounded-full object-cover border border-border"
+                      />
+                    ) : (
+                      <div className="w-16 h-16 rounded-full bg-bg-tertiary border border-border flex items-center justify-center">
+                        <Camera className="w-6 h-6 text-text-muted" />
+                      </div>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => profileInputRef.current?.click()}
+                      disabled={saving || uploadingImage}
+                      className="absolute -bottom-1 -right-1 p-1.5 rounded-full bg-primary-600 text-white shadow-md hover:bg-primary-700 transition-colors disabled:opacity-50"
+                      title="Upload profile image"
+                    >
+                      {uploadingImage ? (
+                        <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                      ) : (
+                        <Upload className="w-3.5 h-3.5" />
+                      )}
+                    </button>
+                  </div>
+                  <input
+                    ref={profileInputRef}
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp,image/heic,image/heif"
+                    className="hidden"
+                    onChange={handleProfileImage}
+                  />
+                </div>
+                <div className="flex-1 min-w-0 space-y-1">
+                  <p className="font-mono text-xs text-text-muted">{selectedStudent.displayId}</p>
+                  {editingName ? (
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="text"
+                        value={editName}
+                        onChange={(e) => setEditName(e.target.value)}
+                        className="w-full px-2 py-1 text-sm bg-white border border-border rounded-lg text-text-primary focus:outline-none focus:ring-2 focus:ring-primary-500"
+                        autoFocus
+                      />
+                      <Button size="sm" disabled={saving} onClick={saveNameEdit}>Save</Button>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-2">
+                      <p className="text-lg font-bold text-text-primary truncate">{selectedStudent.name || "—"}</p>
+                      <button
+                        type="button"
+                        onClick={() => { setEditName(selectedStudent.name || ""); setEditingName(true); }}
+                        className="p-1 text-text-muted hover:text-primary-600 transition-colors"
+                        title="Edit name"
+                      >
+                        <Pencil className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  )}
+                  {editingEmail ? (
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="email"
+                        value={editEmail}
+                        onChange={(e) => setEditEmail(e.target.value)}
+                        className="w-full px-2 py-1 text-sm bg-white border border-border rounded-lg text-text-primary focus:outline-none focus:ring-2 focus:ring-primary-500"
+                        autoFocus
+                      />
+                      <Button size="sm" disabled={saving} onClick={saveEmailEdit}>Save</Button>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-2">
+                      <p className="text-sm text-text-secondary truncate">{selectedStudent.email || "No email on record"}</p>
+                      <button
+                        type="button"
+                        onClick={() => { setEditEmail(selectedStudent.email || ""); setEditingEmail(true); }}
+                        className="p-1 text-text-muted hover:text-primary-600 transition-colors"
+                        title="Edit email"
+                      >
+                        <Pencil className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  )}
+                </div>
               </div>
 
               <div className="space-y-3">

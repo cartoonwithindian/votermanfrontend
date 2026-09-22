@@ -24,6 +24,7 @@ import {
   ListChecks,
   Trash2,
   Pencil,
+  RefreshCw,
 } from "lucide-react"
 import { useState, useMemo, useEffect, useRef } from "react"
 import { COURSES } from "@/lib/class-data"
@@ -46,11 +47,13 @@ export default function CandidateManagementPage() {
 
   const [approveError, setApproveError] = useState("")
 
-  // Edit candidate (name/photo/manifesto) — PATCH /admin/candidates/:id
+  // Edit candidate (name/photo/bio/manifesto) — PATCH /admin/candidates/:id
   const [showEditModal, setShowEditModal] = useState(false)
-  const [editForm, setEditForm] = useState({ name: "", photo: "", manifesto: "" })
+  const [editForm, setEditForm] = useState({ name: "", photo: "", bio: "", manifesto: "" })
   const [savingEdit, setSavingEdit] = useState(false)
   const [editError, setEditError] = useState("")
+  const [uploadingPhoto, setUploadingPhoto] = useState(false)
+  const editPhotoRef = useRef<HTMLInputElement>(null)
 
   // JSON override state
   const [jsonInfo, setJsonInfo] = useState<{ hasJson: boolean; count: number; candidates?: any[] } | null>(null)
@@ -269,7 +272,7 @@ export default function CandidateManagementPage() {
 
   const openEdit = (candidate: any) => {
     setSelectedCandidate(candidate)
-    setEditForm({ name: candidate.name || "", photo: candidate.photo || "", manifesto: candidate.manifesto || "" })
+    setEditForm({ name: candidate.name || "", photo: candidate.photo || "", bio: candidate.bio || "", manifesto: candidate.manifesto || "" })
     setEditError("")
     setShowEditModal(true)
   }
@@ -293,7 +296,13 @@ export default function CandidateManagementPage() {
         method: "PATCH",
         credentials: "include",
         headers: { "Content-Type": "application/json", "X-CSRF-Token": csrf, "X-Session-Binding": getBindingToken() },
-        body: JSON.stringify({ name: editForm.name.trim(), image_url: editForm.photo.trim() || null, description: editForm.manifesto.trim() || null }),
+        body: JSON.stringify({
+          application_id: String(selectedCandidate.id),
+          name: editForm.name.trim(),
+          image_url: editForm.photo.trim() || null,
+          bio: editForm.bio.trim() || null,
+          manifesto: editForm.manifesto.trim() || null,
+        }),
       })
       const body = await res.json().catch(() => ({}))
       if (!res.ok) throw new Error(body.message || "Update failed")
@@ -305,6 +314,39 @@ export default function CandidateManagementPage() {
       setEditError(err.message || "Update failed")
     } finally {
       setSavingEdit(false)
+    }
+  }
+
+  const handleEditPhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setUploadingPhoto(true)
+    setEditError("")
+    try {
+      const dataUrl = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader()
+        reader.onload = () => resolve(String(reader.result))
+        reader.onerror = () => reject(new Error("Could not read file"))
+        reader.readAsDataURL(file)
+      })
+      const csrf = await fetchCsrf()
+      const res = await fetch(`${API_BASE}/uploads/photo`, {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json", "X-CSRF-Token": csrf, "X-Session-Binding": getBindingToken() },
+        body: JSON.stringify({ image: dataUrl }),
+      })
+      const body = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(body.message || "Upload failed")
+      const url = body?.data?.url ?? body?.url
+      if (!url) throw new Error("Upload failed")
+      setEditForm((f) => ({ ...f, photo: url }))
+      showToast("Photo uploaded", "success")
+    } catch (err: any) {
+      setEditError(err.message || "Photo upload failed")
+    } finally {
+      setUploadingPhoto(false)
+      if (editPhotoRef.current) editPhotoRef.current.value = ""
     }
   }
 
@@ -899,16 +941,44 @@ export default function CandidateManagementPage() {
                 </div>
                 <div>
                   <label className="text-xs font-medium text-text-secondary uppercase tracking-wide block mb-1">Photo URL</label>
-                  <input
-                    type="text"
-                    value={editForm.photo}
-                    onChange={(e) => setEditForm((f) => ({ ...f, photo: e.target.value }))}
-                    placeholder="https://..."
-                    className="w-full border border-border rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
-                  />
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={editForm.photo}
+                      onChange={(e) => setEditForm((f) => ({ ...f, photo: e.target.value }))}
+                      placeholder="https://..."
+                      className="w-full border border-border rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+                    />
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="flex-shrink-0 gap-1.5"
+                      disabled={uploadingPhoto}
+                      onClick={() => editPhotoRef.current?.click()}
+                    >
+                      {uploadingPhoto ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
+                      Upload
+                    </Button>
+                    <input
+                      ref={editPhotoRef}
+                      type="file"
+                      accept="image/jpeg,image/png,image/webp,image/heic,image/heif"
+                      className="hidden"
+                      onChange={handleEditPhotoUpload}
+                    />
+                  </div>
                   {selectedCandidate.photo && (
-                    <img src={selectedCandidate.photo} alt={selectedCandidate.name} className="mt-2 w-12 h-12 rounded-full object-cover border border-border" />
+                    <img src={editForm.photo || selectedCandidate.photo} alt={selectedCandidate.name} className="mt-2 w-12 h-12 rounded-full object-cover border border-border" />
                   )}
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-text-secondary uppercase tracking-wide block mb-1">Bio</label>
+                  <textarea
+                    value={editForm.bio}
+                    onChange={(e) => setEditForm((f) => ({ ...f, bio: e.target.value }))}
+                    rows={3}
+                    className="w-full border border-border rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 resize-none"
+                  />
                 </div>
                 <div>
                   <label className="text-xs font-medium text-text-secondary uppercase tracking-wide block mb-1">Manifesto</label>
