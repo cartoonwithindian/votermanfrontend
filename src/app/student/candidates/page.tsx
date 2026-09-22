@@ -13,6 +13,7 @@ import { CandidateSearch } from "@/components/candidate/CandidateSearch";
 import { CandidateFilters } from "@/components/candidate/CandidateFilters";
 import { CandidateSort } from "@/components/candidate/CandidateSort";
 import { CandidateCount } from "@/components/candidate/CandidateCount";
+import { MyCandidacyEditor } from "@/components/candidate/MyCandidacyEditor";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { StudentLayout } from "@/components/layout/StudentLayout";
 import { Button } from "@/components/ui/Button";
@@ -248,6 +249,8 @@ export default function CandidatePage() {
 
       <main className="flex-1 p-4 sm:p-6 lg:p-8">
         <div className="max-w-7xl mx-auto space-y-5">
+          <MyCandidacyEditor onUpdated={() => loadCandidates()} />
+
           <CandidateSearch
             onSearchChange={setSearchQuery}
             placeholder="Search candidates..."
