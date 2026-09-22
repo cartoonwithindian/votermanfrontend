@@ -39,6 +39,8 @@ export const CandidateCard: React.FC<CandidateCardProps> = ({
           <img
             src={candidate.profilePhotoUrl}
             alt={candidate.name}
+            loading="lazy"
+            decoding="async"
             className="h-full w-full object-cover"
           />
         ) : (

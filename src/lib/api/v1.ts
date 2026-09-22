@@ -1,6 +1,8 @@
 // Typed client for the VoteWeb API served by voteweb-backend.
 // Endpoints & payload shapes mirror the Express backend in /voteweb-backend
 // (mount prefix /api/v1, session cookie `cv_sid`).
+import { cachedFetch } from "./cache";
+
 const API_BASE = (
   process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000/api/v1"
 ).replace(/\/$/, "");
@@ -67,28 +69,31 @@ export interface AnnouncementV1 {
 }
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
-  let res: Response;
   try {
-    res = await fetch(`${API_BASE}${path}`, {
+    return await cachedFetch(`${API_BASE}${path}`, {
       ...init,
       credentials: "include",
       headers: { "Content-Type": "application/json", ...(init?.headers || {}) },
+    }, async (res: Response): Promise<T> => {
+      let body: unknown;
+      try {
+        body = await res.json();
+      } catch {
+        body = {};
+      }
+      if (!res.ok) {
+        const msg =
+          (body as { message?: string; error?: string }).message ||
+          (body as { error?: string }).error ||
+          `Request failed (HTTP ${res.status})`;
+        throw new V1ApiError(msg, res.status);
+      }
+      return body as T;
     });
-  } catch {
+  } catch (e) {
+    if (e instanceof V1ApiError) throw e;
     throw new V1ApiError("Unable to reach the VoteWeb API.", 0);
   }
-
-  const body = await res.json().catch(() => ({}));
-
-  if (!res.ok) {
-    const msg =
-      (body as { message?: string; error?: string }).message ||
-      (body as { error?: string }).error ||
-      `Request failed (HTTP ${res.status})`;
-    throw new V1ApiError(msg, res.status);
-  }
-
-  return body as T;
 }
 
 function toQuery(params: Record<string, string | number | undefined>) {

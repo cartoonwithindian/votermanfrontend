@@ -1,3 +1,5 @@
+import { cachedFetch } from "./cache";
+
 // API Client for VoteWeb Backend
 // Backend: Railway (vote-main-production.up.railway.app)
 // Uses session cookies + CSRF tokens for authentication
@@ -89,22 +91,24 @@ class ApiClient {
       }
     }
 
-    const res = await fetch(`${API_BASE}${endpoint}`, {
+    const res = await cachedFetch(`${API_BASE}${endpoint}`, {
       ...options,
       headers,
       credentials: 'include',
+    }, async (r) => {
+      const data = await r.json().catch(() => ({}));
+
+      if (!r.ok) {
+        if (r.status === 401 && options.method && ['POST', 'PUT', 'PATCH', 'DELETE'].includes(options.method)) {
+          handleReauth();
+        }
+        throw new ApiError(data.message || data.error?.message || data.error || `HTTP ${r.status}`, r.status);
+      }
+
+      return data.data || data;
     });
 
-    const data = await res.json().catch(() => ({}));
-
-    if (!res.ok) {
-      if (res.status === 401 && options.method && ['POST', 'PUT', 'PATCH', 'DELETE'].includes(options.method)) {
-        handleReauth();
-      }
-      throw new ApiError(data.message || data.error?.message || data.error || `HTTP ${res.status}`, res.status);
-    }
-
-    return data.data || data;
+    return res;
   }
 
   async get<T>(endpoint: string): Promise<T> {
