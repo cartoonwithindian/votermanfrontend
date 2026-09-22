@@ -1,11 +1,10 @@
 "use client";
 
 import React from "react";
-import Link from "next/link";
 import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
-import { Check, ExternalLink } from "lucide-react";
+import { Check } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { VotingCandidate } from "@/lib/election-voting-data";
 
@@ -84,15 +83,6 @@ export const CandidateVotingCard: React.FC<CandidateVotingCardProps> = ({
               "Select"
             )}
           </Button>
-          <Link
-            href={`/student/candidates/${candidate.id}`}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <Button variant="ghost" size="sm" className="gap-1.5">
-              <ExternalLink className="w-3.5 h-3.5" />
-              Profile
-            </Button>
-          </Link>
         </div>
       </div>
     </Card>

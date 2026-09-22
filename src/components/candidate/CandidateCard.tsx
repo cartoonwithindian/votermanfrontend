@@ -1,11 +1,10 @@
 "use client";
 
 import React from "react";
-import Link from "next/link";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
-import { Eye, Scale, Check } from "lucide-react";
+import { Scale, Check } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Candidate } from "@/lib/candidate-data";
 
@@ -85,17 +84,6 @@ export const CandidateCard: React.FC<CandidateCardProps> = ({
         )}
 
         <div className="pt-3 border-t border-border space-y-2">
-          <Link href={`/student/candidates/${candidate.id}`}>
-            <Button
-              variant="secondary"
-              size="sm"
-              className="w-full justify-center gap-1.5"
-            >
-              <Eye className="w-3.5 h-3.5" />
-              VIEW PROFILE
-            </Button>
-          </Link>
-
           <div className="flex gap-2">
             {onCompare && (
               <Button
