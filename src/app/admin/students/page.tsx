@@ -53,7 +53,7 @@ export default function StudentsPage() {
   const [selectedStudent, setSelectedStudent] = useState<UiStudent | null>(null);
   const [saving, setSaving] = useState(false);
   const [showCreate, setShowCreate] = useState(false);
-  const [createForm, setCreateForm] = useState({ external_id: "", name: "", email: "" });
+  const [createForm, setCreateForm] = useState({ name: "", email: "", department: "", year: "", section: "" });
   const [createError, setCreateError] = useState("");
   const [creating, setCreating] = useState(false);
   const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
@@ -61,6 +61,14 @@ export default function StudentsPage() {
   const [editEmail, setEditEmail] = useState("");
   const [editingName, setEditingName] = useState(false);
   const [editingEmail, setEditingEmail] = useState(false);
+  const [editingMobile, setEditingMobile] = useState(false);
+  const [editingEnrollment, setEditingEnrollment] = useState(false);
+  const [editingStudentId, setEditingStudentId] = useState(false);
+  const [editingOfficialEmail, setEditingOfficialEmail] = useState(false);
+  const [editMobile, setEditMobile] = useState("");
+  const [editEnrollment, setEditEnrollment] = useState("");
+  const [editStudentId, setEditStudentId] = useState("");
+  const [editOfficialEmail, setEditOfficialEmail] = useState("");
   const [uploadingImage, setUploadingImage] = useState(false);
   const profileInputRef = useRef<HTMLInputElement | null>(null);
 
@@ -80,6 +88,10 @@ export default function StudentsPage() {
       name?: string;
       email?: string | null;
       profile_image_url?: string | null;
+      mobile_number?: string | null;
+      enrollment_number?: string | null;
+      student_id?: string | null;
+      official_email?: string | null;
     }
   ) => {
     setSaving(true);
@@ -122,6 +134,46 @@ export default function StudentsPage() {
     setEditingEmail(false);
   };
 
+  const saveMobileEdit = async () => {
+    if (!selectedStudent) return;
+    const trimmed = editMobile.trim();
+    if (trimmed && (trimmed.length > 20 || !/^[0-9+\-\s()]+$/.test(trimmed))) {
+      showToast("Invalid mobile number", "error");
+      return;
+    }
+    await patchStudent(selectedStudent.id, { mobile_number: trimmed || null });
+    setEditingMobile(false);
+  };
+
+  const saveEnrollmentEdit = async () => {
+    if (!selectedStudent) return;
+    const trimmed = editEnrollment.trim();
+    if (trimmed.length > 64) {
+      showToast("Enrollment number too long", "error");
+      return;
+    }
+    await patchStudent(selectedStudent.id, { enrollment_number: trimmed || null });
+    setEditingEnrollment(false);
+  };
+
+  const saveStudentIdEdit = async () => {
+    if (!selectedStudent) return;
+    const trimmed = editStudentId.trim();
+    await patchStudent(selectedStudent.id, { student_id: trimmed || null });
+    setEditingStudentId(false);
+  };
+
+  const saveOfficialEmailEdit = async () => {
+    if (!selectedStudent) return;
+    const trimmed = editOfficialEmail.trim();
+    if (trimmed && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed)) {
+      showToast("Invalid email format", "error");
+      return;
+    }
+    await patchStudent(selectedStudent.id, { official_email: trimmed || null });
+    setEditingOfficialEmail(false);
+  };
+
   const handleProfileImage = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file || !selectedStudent) return;
@@ -149,19 +201,21 @@ export default function StudentsPage() {
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
     setCreateError("");
-    if (!createForm.external_id.trim() || !createForm.name.trim()) {
-      setCreateError("Student ID and Name are required.");
+    if (!createForm.name.trim() || !createForm.department || !createForm.year) {
+      setCreateError("Name, Department and Year are required.");
       return;
     }
     setCreating(true);
     try {
       await adminApi.createStudent({
-        external_id: createForm.external_id.trim(),
         name: createForm.name.trim(),
         email: createForm.email.trim() || undefined,
+        department: createForm.department,
+        year_or_semester: createForm.year,
+        section: createForm.section || undefined,
       });
       setShowCreate(false);
-      setCreateForm({ external_id: "", name: "", email: "" });
+      setCreateForm({ name: "", email: "", department: "", year: "", section: "" });
       load();
     } catch (err) {
       setCreateError(err instanceof Error ? err.message : "Failed to create student.");
@@ -182,6 +236,24 @@ export default function StudentsPage() {
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to deactivate student.");
+    }
+    setSaving(false);
+  };
+
+  const handleRemove = async (student: UiStudent) => {
+    if (!confirm(`PERMANENTLY DELETE ${student.name || student.displayId}?\n\nThis removes the student account, their login sessions and candidate applications entirely. This cannot be undone.`)) return;
+    setSaving(true);
+    try {
+      await adminApi.removeStudent(student.id);
+      setStudents((prev) => prev.filter((s) => s.id !== student.id));
+      if (selectedStudent?.id === student.id) {
+        setSelectedStudent(null);
+      }
+      showToast(`${student.name || "Student"} deleted permanently`, "success");
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Failed to delete student.";
+      setError(msg);
+      showToast(msg, "error");
     }
     setSaving(false);
   };
@@ -561,6 +633,110 @@ export default function StudentsPage() {
               </div>
 
               <div className="space-y-3">
+                <div className="py-2 border-b border-border">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-text-muted mb-1.5">Contact & ID</p>
+                  <div className="flex items-center justify-between py-1.5">
+                    <span className="text-sm text-text-secondary">Mobile</span>
+                    {editingMobile ? (
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="text"
+                          value={editMobile}
+                          onChange={(e) => setEditMobile(e.target.value)}
+                          className="w-40 px-2 py-1 text-sm bg-white border border-border rounded-lg text-text-primary focus:outline-none focus:ring-2 focus:ring-primary-500"
+                          autoFocus
+                        />
+                        <Button size="sm" disabled={saving} onClick={saveMobileEdit}>Save</Button>
+                      </div>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => { setEditMobile(selectedStudent.mobile_number || ""); setEditingMobile(true); }}
+                        className="flex items-center gap-2 text-sm text-text-primary hover:text-primary-600 transition-colors"
+                        title="Edit mobile number"
+                      >
+                        <span>{selectedStudent.mobile_number || "—"}</span>
+                        <Pencil className="w-3.5 h-3.5 text-text-muted" />
+                      </button>
+                    )}
+                  </div>
+                  <div className="flex items-center justify-between py-1.5">
+                    <span className="text-sm text-text-secondary">Enrollment No.</span>
+                    {editingEnrollment ? (
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="text"
+                          value={editEnrollment}
+                          onChange={(e) => setEditEnrollment(e.target.value)}
+                          className="w-40 px-2 py-1 text-sm bg-white border border-border rounded-lg text-text-primary focus:outline-none focus:ring-2 focus:ring-primary-500"
+                          autoFocus
+                        />
+                        <Button size="sm" disabled={saving} onClick={saveEnrollmentEdit}>Save</Button>
+                      </div>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => { setEditEnrollment(selectedStudent.enrollment_number || ""); setEditingEnrollment(true); }}
+                        className="flex items-center gap-2 text-sm text-text-primary hover:text-primary-600 transition-colors"
+                        title="Edit enrollment number"
+                      >
+                        <span>{selectedStudent.enrollment_number || "—"}</span>
+                        <Pencil className="w-3.5 h-3.5 text-text-muted" />
+                      </button>
+                    )}
+                  </div>
+                  <div className="flex items-center justify-between py-1.5">
+                    <span className="text-sm text-text-secondary">Student ID</span>
+                    {editingStudentId ? (
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="text"
+                          value={editStudentId}
+                          onChange={(e) => setEditStudentId(e.target.value)}
+                          className="w-40 px-2 py-1 text-sm bg-white border border-border rounded-lg text-text-primary focus:outline-none focus:ring-2 focus:ring-primary-500"
+                          autoFocus
+                        />
+                        <Button size="sm" disabled={saving} onClick={saveStudentIdEdit}>Save</Button>
+                      </div>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => { setEditStudentId(selectedStudent.student_id || ""); setEditingStudentId(true); }}
+                        className="flex items-center gap-2 text-sm text-text-primary hover:text-primary-600 transition-colors"
+                        title="Edit student ID"
+                      >
+                        <span>{selectedStudent.student_id || "—"}</span>
+                        <Pencil className="w-3.5 h-3.5 text-text-muted" />
+                      </button>
+                    )}
+                  </div>
+                  <div className="flex items-center justify-between py-1.5">
+                    <span className="text-sm text-text-secondary">Official Email</span>
+                    {editingOfficialEmail ? (
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="email"
+                          value={editOfficialEmail}
+                          onChange={(e) => setEditOfficialEmail(e.target.value)}
+                          className="w-40 px-2 py-1 text-sm bg-white border border-border rounded-lg text-text-primary focus:outline-none focus:ring-2 focus:ring-primary-500"
+                          autoFocus
+                        />
+                        <Button size="sm" disabled={saving} onClick={saveOfficialEmailEdit}>Save</Button>
+                      </div>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => { setEditOfficialEmail(selectedStudent.official_email || ""); setEditingOfficialEmail(true); }}
+                        className="flex items-center gap-2 text-sm text-text-primary hover:text-primary-600 transition-colors"
+                        title="Edit official email"
+                      >
+                        <span className="truncate max-w-[180px]">{selectedStudent.official_email || "—"}</span>
+                        <Pencil className="w-3.5 h-3.5 text-text-muted flex-shrink-0" />
+                      </button>
+                    )}
+                  </div>
+                </div>
+
                 <div className="flex items-center justify-between py-2 border-b border-border">
                   <span className="text-sm text-text-secondary">Role</span>
                   <select
@@ -677,16 +853,28 @@ export default function StudentsPage() {
               </div>
 
               <div className="flex justify-between pt-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  disabled={saving}
-                  onClick={() => handleDelete(selectedStudent)}
-                  className="gap-1.5 text-error-600 border-error-200 hover:bg-error-50"
-                >
-                  <Trash2 className="w-3.5 h-3.5" />
-                  Deactivate
-                </Button>
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={saving}
+                    onClick={() => handleDelete(selectedStudent)}
+                    className="gap-1.5 text-error-600 border-error-200 hover:bg-error-50"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                    Deactivate
+                  </Button>
+                  <Button
+                    variant="danger"
+                    size="sm"
+                    disabled={saving}
+                    onClick={() => handleRemove(selectedStudent)}
+                    className="gap-1.5"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                    Delete Forever
+                  </Button>
+                </div>
                 <Button variant="secondary" onClick={() => setSelectedStudent(null)} className="gap-1.5">
                   <X className="w-4 h-4" />
                   Close
@@ -705,16 +893,6 @@ export default function StudentsPage() {
               </div>
             )}
             <div>
-              <label className="block text-sm font-medium text-text-secondary mb-1">Student ID *</label>
-              <input
-                type="text"
-                value={createForm.external_id}
-                onChange={(e) => setCreateForm((f) => ({ ...f, external_id: e.target.value }))}
-                placeholder="e.g. 2024001"
-                className="w-full px-3 py-2.5 text-sm bg-white border border-border rounded-xl text-text-primary placeholder:text-text-muted focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all"
-              />
-            </div>
-            <div>
               <label className="block text-sm font-medium text-text-secondary mb-1">Full Name *</label>
               <input
                 type="text"
@@ -725,7 +903,7 @@ export default function StudentsPage() {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-text-secondary mb-1">Email (optional)</label>
+              <label className="block text-sm font-medium text-text-secondary mb-1">Email</label>
               <input
                 type="email"
                 value={createForm.email}
@@ -733,6 +911,47 @@ export default function StudentsPage() {
                 placeholder="e.g. john@college.edu"
                 className="w-full px-3 py-2.5 text-sm bg-white border border-border rounded-xl text-text-primary placeholder:text-text-muted focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all"
               />
+            </div>
+            <div className="grid grid-cols-3 gap-3">
+              <div>
+                <label className="block text-sm font-medium text-text-secondary mb-1">Department *</label>
+                <select
+                  value={createForm.department}
+                  onChange={(e) => setCreateForm((f) => ({ ...f, department: e.target.value }))}
+                  className="w-full px-3 py-2.5 text-sm bg-white border border-border rounded-xl text-text-primary focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all"
+                >
+                  <option value="">—</option>
+                  {COURSES.map((c) => (
+                    <option key={c} value={c}>{c}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-text-secondary mb-1">Year *</label>
+                <select
+                  value={createForm.year}
+                  onChange={(e) => setCreateForm((f) => ({ ...f, year: e.target.value }))}
+                  className="w-full px-3 py-2.5 text-sm bg-white border border-border rounded-xl text-text-primary focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all"
+                >
+                  <option value="">—</option>
+                  {["1 Sem", "3 Sem", "5 Sem"].map((y) => (
+                    <option key={y} value={y}>{y}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-text-secondary mb-1">Section</label>
+                <select
+                  value={createForm.section}
+                  onChange={(e) => setCreateForm((f) => ({ ...f, section: e.target.value }))}
+                  className="w-full px-3 py-2.5 text-sm bg-white border border-border rounded-xl text-text-primary focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all"
+                >
+                  <option value="">—</option>
+                  {["A1", "A2", "A3"].map((s) => (
+                    <option key={s} value={s}>{s}</option>
+                  ))}
+                </select>
+              </div>
             </div>
             <div className="flex justify-end gap-2 pt-2">
               <Button variant="secondary" type="button" onClick={() => setShowCreate(false)} disabled={creating}>

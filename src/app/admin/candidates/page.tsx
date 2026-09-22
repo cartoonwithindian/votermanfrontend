@@ -9,6 +9,9 @@ import {
   updateApplicationStatus,
   getAllApplications,
   type CandidateApplicationData,
+  DEPARTMENT_OPTIONS,
+  YEAR_OPTIONS,
+  SECTION_OPTIONS,
 } from "@/lib/candidate-application-store"
 import {
   Search,
@@ -49,7 +52,7 @@ export default function CandidateManagementPage() {
 
   // Edit candidate (name/photo/bio/manifesto) — PATCH /admin/candidates/:id
   const [showEditModal, setShowEditModal] = useState(false)
-  const [editForm, setEditForm] = useState({ name: "", photo: "", bio: "", manifesto: "" })
+  const [editForm, setEditForm] = useState({ name: "", photo: "", bio: "", manifesto: "", department: "", year: "", section: "", gender: "" })
   const [savingEdit, setSavingEdit] = useState(false)
   const [editError, setEditError] = useState("")
   const [uploadingPhoto, setUploadingPhoto] = useState(false)
@@ -272,7 +275,7 @@ export default function CandidateManagementPage() {
 
   const openEdit = (candidate: any) => {
     setSelectedCandidate(candidate)
-    setEditForm({ name: candidate.name || "", photo: candidate.photo || "", bio: candidate.bio || "", manifesto: candidate.manifesto || "" })
+    setEditForm({ name: candidate.name || "", photo: candidate.photo || "", bio: candidate.bio || "", manifesto: candidate.manifesto || "", department: candidate.department || "", year: candidate.year || "", section: candidate.section || "", gender: candidate.gender || "" })
     setEditError("")
     setShowEditModal(true)
   }
@@ -302,6 +305,10 @@ export default function CandidateManagementPage() {
           image_url: editForm.photo.trim() || null,
           bio: editForm.bio.trim() || null,
           manifesto: editForm.manifesto.trim() || null,
+          department: editForm.department.trim() || undefined,
+          year: editForm.year.trim() || undefined,
+          section: editForm.section.trim() || null,
+          gender: editForm.gender.trim() || undefined,
         }),
       })
       const body = await res.json().catch(() => ({}))
@@ -577,7 +584,7 @@ export default function CandidateManagementPage() {
                       <th className="text-left px-4 py-3 text-xs font-semibold text-text-secondary uppercase">Name</th>
                       <th className="text-left px-4 py-3 text-xs font-semibold text-text-secondary uppercase">Position</th>
                       <th className="text-left px-4 py-3 text-xs font-semibold text-text-secondary uppercase">Category</th>
-                      <th className="text-left px-4 py-3 text-xs font-semibold text-text-secondary uppercase">Department</th>
+                      <th className="text-left px-4 py-3 text-xs font-semibold text-text-secondary uppercase">Dept / Year / Sec</th>
                       <th className="text-left px-4 py-3 text-xs font-semibold text-text-secondary uppercase">Application Status</th>
                       <th className="text-left px-4 py-3 text-xs font-semibold text-text-secondary uppercase">Submitted</th>
                       <th className="text-left px-4 py-3 text-xs font-semibold text-text-secondary uppercase">Actions</th>
@@ -596,7 +603,7 @@ export default function CandidateManagementPage() {
                             {candidate.category === "CR" ? "CR" : "Club"}
                           </Badge>
                         </td>
-                        <td className="px-4 py-3 text-sm text-text-primary">{candidate.department}</td>
+                        <td className="px-4 py-3 text-sm text-text-primary">{candidate.department} / {candidate.year} / {candidate.section}</td>
                         <td className="px-4 py-3">
                           <Badge variant={getStatusBadge(candidate.status)}>
                             {CANDIDATE_STATUS_MAP[candidate.status]?.label}
@@ -649,7 +656,7 @@ export default function CandidateManagementPage() {
                     <div className="flex flex-wrap gap-2">
                       <span className="text-sm text-text-secondary">{candidate.position}</span>
                       <span className="text-text-muted">·</span>
-                      <span className="text-sm text-text-secondary">{candidate.department}</span>
+                      <span className="text-sm text-text-secondary">{candidate.department} / {candidate.year} / {candidate.section}</span>
                     </div>
                     <div className="flex gap-2">
                       <Badge variant={getStatusBadge(candidate.status)}>
@@ -938,6 +945,60 @@ export default function CandidateManagementPage() {
                     onChange={(e) => setEditForm((f) => ({ ...f, name: e.target.value }))}
                     className="w-full border border-border rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
                   />
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-xs font-medium text-text-secondary uppercase tracking-wide block mb-1">Department</label>
+                    <select
+                      value={editForm.department}
+                      onChange={(e) => setEditForm((f) => ({ ...f, department: e.target.value }))}
+                      className="w-full border border-border rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 bg-white dark:bg-[#252540]"
+                    >
+                      <option value="">—</option>
+                      {(selectedCandidate.department && selectedCandidate.department !== "—" ? [selectedCandidate.department] : []).concat(DEPARTMENT_OPTIONS).filter((d, i, arr) => d && arr.indexOf(d) === i).map((d) => (
+                        <option key={d} value={d}>{d}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="text-xs font-medium text-text-secondary uppercase tracking-wide block mb-1">Gender</label>
+                    <select
+                      value={editForm.gender}
+                      onChange={(e) => setEditForm((f) => ({ ...f, gender: e.target.value }))}
+                      className="w-full border border-border rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 bg-white dark:bg-[#252540]"
+                    >
+                      <option value="">—</option>
+                      {["Male", "Female", "Other"].map((g) => (
+                        <option key={g} value={g}>{g}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="text-xs font-medium text-text-secondary uppercase tracking-wide block mb-1">Year</label>
+                    <select
+                      value={editForm.year}
+                      onChange={(e) => setEditForm((f) => ({ ...f, year: e.target.value }))}
+                      className="w-full border border-border rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 bg-white dark:bg-[#252540]"
+                    >
+                      <option value="">—</option>
+                      {(selectedCandidate.year && selectedCandidate.year !== "—" ? [selectedCandidate.year] : []).concat(YEAR_OPTIONS).filter((y, i, arr) => y && arr.indexOf(y) === i).map((y) => (
+                        <option key={y} value={y}>{y}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="text-xs font-medium text-text-secondary uppercase tracking-wide block mb-1">Section</label>
+                    <select
+                      value={editForm.section}
+                      onChange={(e) => setEditForm((f) => ({ ...f, section: e.target.value }))}
+                      className="w-full border border-border rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 bg-white dark:bg-[#252540]"
+                    >
+                      <option value="">—</option>
+                      {(selectedCandidate.section && selectedCandidate.section !== "—" ? [selectedCandidate.section] : []).concat(SECTION_OPTIONS).filter((s, i, arr) => s && arr.indexOf(s) === i).map((s) => (
+                        <option key={s} value={s}>{s}</option>
+                      ))}
+                    </select>
+                  </div>
                 </div>
                 <div>
                   <label className="text-xs font-medium text-text-secondary uppercase tracking-wide block mb-1">Photo URL</label>

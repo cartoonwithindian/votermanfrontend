@@ -137,7 +137,7 @@ interface ElectionStats {
 
 export default function ElectionManagementPage() {
   const [elections, setElections] = useState<AdminElectionRecord[]>([]);
-  const [selectedId, setSelectedId] = useState<number | null>(null);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
   const [stats, setStats] = useState<ElectionStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -181,7 +181,7 @@ export default function ElectionManagementPage() {
   const [createSaving, setCreateSaving] = useState(false);
   const [createError, setCreateError] = useState("");
 
-  const selected = elections.find((e) => e.id === selectedId) || null;
+  const selected = elections.find((e) => String(e.id) === String(selectedId)) || null;
 
   const load = useCallback(async () => {
     try {
@@ -193,10 +193,10 @@ export default function ElectionManagementPage() {
           [];
       setElections(rows);
       setSelectedId((prev) => {
-        if (prev && rows.some((r) => r.id === prev)) return prev;
+        if (prev && rows.some((r) => String(r.id) === String(prev))) return prev;
         // Prefer the live election: OPEN, else first
         const open = rows.find((r) => r.status === "OPEN");
-        return (open || rows[0])?.id ?? null;
+        return open || rows[0] ? String((open || rows[0]).id) : null;
       });
       setError("");
     } catch (e) {
@@ -554,7 +554,7 @@ export default function ElectionManagementPage() {
                 <label className="block text-sm font-medium text-text-primary mb-1">Election</label>
                 <select
                   value={selectedId ?? ""}
-                  onChange={(e) => setSelectedId(Number(e.target.value))}
+                  onChange={(e) => setSelectedId(e.target.value)}
                   className="w-full max-w-md border border-border-strong rounded-xl px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 cursor-pointer"
                 >
                   {elections.map((e) => (

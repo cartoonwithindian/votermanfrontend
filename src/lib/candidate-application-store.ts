@@ -17,6 +17,7 @@ export interface CandidateApplicationData {
   photo: string | null;
   bio: string;
   manifesto: string;
+  gender: string;
   status: ApplicationStatus;
   rejectionReason: string | null;
   adminNote: string | null;
@@ -83,6 +84,7 @@ export async function getAllApplications(): Promise<CandidateApplicationData[]> 
       photo: a.profilePhotoUrl || a.photo || null,
       bio: a.bio || "",
       manifesto: a.manifesto || "",
+      gender: a.gender || "",
       status: (a.status || "under_review") as CandidateApplicationData["status"],
       rejectionReason: a.rejectionReason ?? null,
       adminNote: a.changesRequestedReason ?? null,
@@ -213,6 +215,7 @@ export async function updateApplicationStatus(
     photo: app?.profilePhotoUrl || null,
     bio: app?.bio || "",
     manifesto: app?.manifesto || "",
+    gender: app?.gender || "",
     status: (app?.status || status) as CandidateApplicationData["status"],
     rejectionReason: app?.rejectionReason ?? null,
     adminNote: app?.changesRequestedReason ?? null,

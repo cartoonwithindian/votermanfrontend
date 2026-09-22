@@ -79,10 +79,13 @@ export interface AdminStudentRecord {
   applied_year?: string | null;
   applied_section?: string | null;
   profile_image_url?: string | null;
+  mobile_number?: string | null;
+  enrollment_number?: string | null;
+  official_email?: string | null;
 }
 
 export interface AdminElectionRecord {
-  id: number;
+  id: number | string;
   name: string;
   status: string;
   start_time: string | null;
@@ -163,16 +166,20 @@ export const adminApi = {
   getStudents: () => api.get<{ students?: AdminStudentRecord[] } | AdminStudentRecord[]>("/admin/students"),
 
   // Create a student (POST /admin/students)
-  createStudent: (body: { external_id: string; name: string; email?: string }) =>
+  createStudent: (body: { name: string; email?: string; department?: string; year_or_semester?: string; section?: string }) =>
     api.post<{ data: AdminStudentRecord }>("/admin/students", body),
 
   // Update a student (PATCH /admin/students/:id) — voting eligibility + role management
-  updateStudent: (id: number, patch: { voting_eligible?: boolean; role?: string; name?: string; email?: string | null; department?: string; year_or_semester?: string; section?: string | null; profile_image_url?: string | null }) =>
+  updateStudent: (id: number, patch: { voting_eligible?: boolean; role?: string; name?: string; email?: string | null; department?: string; year_or_semester?: string; section?: string | null; profile_image_url?: string | null; mobile_number?: string | null; enrollment_number?: string | null; student_id?: string | null; official_email?: string | null }) =>
     api.patch<{ data: AdminStudentRecord }>(`/admin/students/${id}`, patch),
 
   // Deactivate/activate student status (PATCH /admin/students/:id/status)
   updateStudentStatus: (id: number, is_active: boolean) =>
     api.patch(`/admin/students/${id}/status`, { is_active }),
+
+  // Permanently remove a student (DELETE /admin/students/:id)
+  removeStudent: (id: number) =>
+    api.delete<{ data: AdminStudentRecord }>(`/admin/students/${id}`),
 
   // Bulk set voting eligibility for all students (PATCH /admin/students/bulk-voting-eligible)
   bulkSetVotingEligible: (voting_eligible: boolean, filters?: { role?: string; is_active?: boolean }) =>
