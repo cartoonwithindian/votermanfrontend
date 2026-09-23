@@ -109,6 +109,7 @@ export interface AdminConstituencyRecord {
   section: string;
   name: string;
   is_active: boolean;
+  voting_open?: boolean;
   created_at?: string;
 }
 
@@ -263,7 +264,7 @@ export const adminApi = {
     api.post<{ data: AdminConstituencyRecord }>("/admin/constituencies", body),
   bulkCreateConstituencies: (body: { election_id: number | string; classes: { department: string; year: string; section: string }[] }) =>
     api.post<{ data: { created: AdminConstituencyRecord[]; skipped: Array<{ department: string; year: string; section: string; reason: string }>; total: number } }>("/admin/constituencies/bulk", body),
-  updateConstituency: (id: number | string, body: { name?: string; is_active?: boolean }) =>
+  updateConstituency: (id: number | string, body: { name?: string; is_active?: boolean; voting_open?: boolean }) =>
     api.patch<{ data: AdminConstituencyRecord }>(`/admin/constituencies/${id}`, body),
   deleteConstituency: (id: number | string) =>
     api.delete(`/admin/constituencies/${id}`),

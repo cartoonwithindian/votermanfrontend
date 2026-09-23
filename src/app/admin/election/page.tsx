@@ -182,6 +182,7 @@ export default function ElectionManagementPage() {
   const [crCandidates, setCrCandidates] = useState<ApprovedCandidateRow[]>([]);
   const [crCandidatesLoading, setCrCandidatesLoading] = useState(false);
   const [crCandidatesError, setCrCandidatesError] = useState("");
+  const [votingBusyId, setVotingBusyId] = useState<number | null>(null);
 
   // Setup wizard — auto-detect classes from students table
   const [detectedClasses, setDetectedClasses] = useState<StudentClass[]>([]);
@@ -422,6 +423,19 @@ export default function ElectionManagementPage() {
       showCrToast("error", e instanceof Error ? e.message : "Failed to deactivate constituency.");
     }
     setCrSaving(false);
+  };
+
+  const handleToggleConstituencyVoting = async (c: AdminConstituencyRecord) => {
+    setVotingBusyId(c.id);
+    try {
+      const label = c.name || `${c.department} ${c.year} Section ${c.section}`;
+      await adminApi.updateConstituency(c.id, { voting_open: !c.voting_open });
+      showCrToast("success", c.voting_open ? `${label} voting stopped.` : `${label} voting started.`);
+      await loadConstituencies();
+    } catch (e) {
+      showCrToast("error", e instanceof Error ? e.message : "Failed to update voting status.");
+    }
+    setVotingBusyId(null);
   };
 
   const runAction = async (fn: () => Promise<unknown>) => {
@@ -826,6 +840,30 @@ export default function ElectionManagementPage() {
                           <p className="text-xs text-text-secondary">
                             {c.department} · {c.year} · Section {c.section}
                           </p>
+                          <div className="flex items-center justify-between gap-2 mt-3">
+                            <Badge variant={c.voting_open ? "success" : "neutral"}>
+                              {c.voting_open ? "Voting Open" : "Voting Closed"}
+                            </Badge>
+                            <Button
+                              variant={c.voting_open ? "danger" : "primary"}
+                              size="sm"
+                              className="shrink-0"
+                              onClick={() => handleToggleConstituencyVoting(c)}
+                              disabled={votingBusyId === c.id}
+                            >
+                              {c.voting_open ? (
+                                <>
+                                  <Square className="w-3.5 h-3.5" />
+                                  Stop Voting
+                                </>
+                              ) : (
+                                <>
+                                  <Play className="w-3.5 h-3.5" />
+                                  Start Voting
+                                </>
+                              )}
+                            </Button>
+                          </div>
                           {canModifyConstituencies && c.is_active && (
                             <button
                               onClick={() => handleDeactivateConstituency(c.id, c.name)}

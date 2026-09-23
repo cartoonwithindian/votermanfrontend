@@ -80,6 +80,7 @@ interface ConstituencyRow {
   section: string;
   name: string;
   is_active: boolean;
+  voting_open?: boolean;
 }
 
 /** GET /elections - all elections. */
@@ -131,7 +132,7 @@ export async function findElectionWithBallot(): Promise<ElectionInfo | null> {
   for (const election of open) {
     try {
       const ballot = await fetchBallot(election.id);
-      if (ballot.length > 0) return election;
+      if (ballot.positions.length > 0) return election;
       if (!fallback) fallback = election;
     } catch {
       // Try the next open election if this one errored/failed to resolve.
@@ -148,7 +149,9 @@ export async function findElectionWithBallot(): Promise<ElectionInfo | null> {
  * never other sections or club positions. Positions with no active
  * candidates are omitted.
  */
-export async function fetchBallot(electionId: string): Promise<BallotPosition[]> {
+export async function fetchBallot(
+  electionId: string
+): Promise<{ positions: BallotPosition[]; exists: boolean; votingOpen: boolean }> {
   const out: BallotPosition[] = [];
 
   // The student's own CR seat (backend resolves by department/year/section).
@@ -162,7 +165,7 @@ export async function fetchBallot(electionId: string): Promise<BallotPosition[]>
   if (!constituency) {
     // Legitimate empty: the student has no class-representative seat in
     // this election (backend returns 200 {constituency:null}).
-    return out;
+    return { positions: out, exists: false, votingOpen: false };
   }
 
   const positions = await api.get<PositionRow[]>(`/constituencies/${constituency.id}/positions`);
@@ -194,7 +197,7 @@ export async function fetchBallot(electionId: string): Promise<BallotPosition[]>
   }
 
   out.sort((a, b) => a.order - b.order);
-  return out;
+  return { positions: out, exists: true, votingOpen: constituency.voting_open !== false };
 }
 
 /**

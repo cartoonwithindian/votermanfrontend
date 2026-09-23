@@ -50,8 +50,15 @@ function VotePageInner() {
           return;
         }
 
-        const ballot = await fetchBallot(election.id);
+        const { positions: ballot, exists, votingOpen } = await fetchBallot(election.id);
         if (!alive) return;
+        if (exists && !votingOpen) {
+          setState({
+            phase: "error",
+            message: "Voting has not started for your class yet.",
+          });
+          return;
+        }
         if (ballot.length === 0) {
           setState({
             phase: "error",

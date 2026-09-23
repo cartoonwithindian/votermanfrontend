@@ -62,8 +62,13 @@ function ReviewPageInner({ searchParams }: { searchParams: { get(key: string): s
           return;
         }
 
-        const ballot = await fetchBallot(electionIdFromUrl);
+        const { positions: ballot, exists, votingOpen } = await fetchBallot(electionIdFromUrl);
         if (!alive) return;
+        if (exists && !votingOpen) {
+          setLoadError("Voting has not started for your class yet.");
+          setLoading(false);
+          return;
+        }
         if (ballot.length === 0) {
           setLoadError("No voting positions are available for your class in this election.");
           setLoading(false);
