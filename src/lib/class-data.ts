@@ -116,3 +116,19 @@ export function normalizeCourse(department: string | null | undefined): Course |
   if (!value) return "";
   return COURSES.find((c) => c.toLowerCase() === value.toLowerCase()) || "";
 }
+
+const ORDINAL_SUFFIX = { 1: "st", 2: "nd", 3: "rd" } as const;
+
+export function normalizeYear(year: string | null | undefined): Year | string {
+  const trimmed = (year || "").trim();
+  if (!trimmed) return "";
+  if (/^\d+(st|nd|rd|th)\s+Year$/i.test(trimmed)) return trimmed;
+  const semMatch = trimmed.match(/^(\d+)\s*Sem$/i);
+  if (semMatch) {
+    const sem = parseInt(semMatch[1], 10);
+    const n = Math.max(1, Math.ceil(sem / 2));
+    const suffix = ORDINAL_SUFFIX[n as 1 | 2 | 3] || "th";
+    return `${n}${suffix} Year`;
+  }
+  return trimmed;
+}

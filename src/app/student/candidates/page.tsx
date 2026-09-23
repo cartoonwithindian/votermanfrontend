@@ -6,13 +6,8 @@ import { Scale, CheckCircle2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { listCandidates } from "@/lib/candidates-api";
 import { studentApi } from "@/lib/api/students";
+import { normalizeCourse, normalizeYear } from "@/lib/class-data";
 import type { Candidate } from "@/lib/candidate-data";
-import {
-  getBatchesForCourse,
-  type Course,
-  type Section,
-  type Year,
-} from "@/lib/class-data";
 
 import { CandidateGrid } from "@/components/candidate/CandidateGrid";
 import { CandidateCount } from "@/components/candidate/CandidateCount";
@@ -30,32 +25,28 @@ export default function CandidatePage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Selected class — defaults to the student's own course/year/section.
-  const [selectedClass, setSelectedClass] = useState({
-    department: "",
-    year: "" as Year | "",
-    section: "" as Section,
-  });
+  // The logged-in student's own class — students only ever see their own
+  // cohort's candidates here (the backend enforces this too).
+  const [ownClass, setOwnClass] = useState<{
+    department: string;
+    year: string;
+    section: string;
+  } | null>(null);
 
   const [comparedIds, setComparedIds] = useState<Set<string>>(new Set());
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
-  // Pre-select the logged-in student's own class when available.
   useEffect(() => {
     let cancelled = false;
     studentApi
       .getProfile()
       .then((profile) => {
-        if (
-          !cancelled &&
-          profile?.department &&
-          profile.year &&
-          profile.department in { MBA: 1, MCA: 1, BBA: 1, BCom: 1, BCA: 1, TEST: 1 }
-        ) {
-          setSelectedClass({
-            department: profile.department,
-            year: profile.year as Year,
-            section: (profile.section || "") as Section,
+        if (cancelled) return;
+        if (profile?.department && profile.year) {
+          setOwnClass({
+            department: normalizeCourse(profile.department) || profile.department,
+            year: normalizeYear(profile.year),
+            section: profile.section || "",
           });
         }
       })
@@ -65,25 +56,11 @@ export default function CandidatePage() {
     };
   }, []);
 
-  const classYears: Year[] =
-    selectedClass.department === ""
-      ? []
-      : Array.from(
-          new Set(
-            getBatchesForCourse(selectedClass.department as Course).map((b) => b.year)
-          )
-        );
-
-  // Load candidates for the selected class from the API
-  const loadCandidates = useCallback(async (cls: typeof selectedClass) => {
+  const loadCandidates = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      const data = await listCandidates({
-        department: cls.department || undefined,
-        year: cls.year || undefined,
-        section: cls.section || undefined,
-      });
+      const data = await listCandidates();
       setCandidates(data);
     } catch (err) {
       console.error("Failed to load candidates:", err);
@@ -97,25 +74,27 @@ export default function CandidatePage() {
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      const data = await listCandidates({
-        department: selectedClass.department || undefined,
-        year: selectedClass.year || undefined,
-        section: selectedClass.section || undefined,
-      });
-      if (cancelled) return;
-      setCandidates(data);
-      setLoading(false);
+      try {
+        const data = await listCandidates();
+        if (cancelled) return;
+        setCandidates(data);
+      } catch (err) {
+        console.error("Failed to load candidates:", err);
+        if (cancelled) return;
+        setError("Failed to load candidates. Please try again.");
+        setCandidates([]);
+      } finally {
+        if (cancelled) return;
+        setLoading(false);
+      }
     })();
     return () => {
       cancelled = true;
     };
-  }, [selectedClass]);
+  }, []);
 
-  // Event-handler retry (loading flag is set here, not inside the effect).
   const retry = () => {
-    setLoading(true);
-    setError(null);
-    loadCandidates(selectedClass);
+    loadCandidates();
   };
 
   const toggleCompare = (id: string) => {
@@ -151,8 +130,10 @@ export default function CandidatePage() {
     return { boys: b, girls: g };
   }, [candidates]);
 
-  const hasClass = Boolean(selectedClass.department && selectedClass.year);
   const totalCount = candidates.length;
+  const classLabel = ownClass
+    ? `${ownClass.department} ${ownClass.year}${ownClass.section ? ` Section ${ownClass.section}` : ""}`
+    : "";
 
   if (loading) {
     return (
@@ -190,83 +171,16 @@ export default function CandidatePage() {
             </div>
           </div>
 
-          {/* Class picker — pick department + year + section to view that class's CR seats */}
-          <div className="grid gap-3 sm:grid-cols-3 mt-5 max-w-3xl">
-            <div>
-              <label className="text-xs font-medium text-gray-500 uppercase tracking-wide block mb-1">
-                Department
-              </label>
-              <select
-                value={selectedClass.department}
-                onChange={(e) =>
-                  setSelectedClass({
-                    department: e.target.value,
-                    year: "",
-                    section: "",
-                  })
-                }
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
-                <option value="">Select department</option>
-                {["MBA", "MCA", "BBA", "BCom", "BCA", "TEST"].map((d) => (
-                  <option key={d} value={d}>
-                    {d}
-                  </option>
-                ))}
-              </select>
+          {ownClass && (
+            <div className="mt-5 max-w-3xl">
+              <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-gray-50 border border-gray-200 text-sm">
+                <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">
+                  Your Class
+                </span>
+                <span className="font-medium text-text-primary">{classLabel}</span>
+              </div>
             </div>
-            <div>
-              <label className="text-xs font-medium text-gray-500 uppercase tracking-wide block mb-1">
-                Year
-              </label>
-              <select
-                value={selectedClass.year}
-                disabled={!selectedClass.department}
-                onChange={(e) =>
-                  setSelectedClass((s) => ({ ...s, year: e.target.value as Year }))
-                }
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
-              >
-                <option value="">Select year</option>
-                {classYears.map((y) => (
-                  <option key={y} value={y}>
-                    {y}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label className="text-xs font-medium text-gray-500 uppercase tracking-wide block mb-1">
-                Section
-              </label>
-              <select
-                value={selectedClass.section}
-                disabled={!selectedClass.department}
-                onChange={(e) =>
-                  setSelectedClass((s) => ({ ...s, section: e.target.value as Section }))
-                }
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
-              >
-                <option value="">Select section</option>
-                {(() => {
-                  const secs = selectedClass.department
-                    ? Array.from(
-                        new Set(
-                          getBatchesForCourse(selectedClass.department as Course).map(
-                            (b) => b.section
-                          )
-                        )
-                      )
-                    : [];
-                  return secs.map((s) => (
-                    <option key={s || "__none"} value={s}>
-                      {s || "No section"}
-                    </option>
-                  ));
-                })()}
-              </select>
-            </div>
-          </div>
+          )}
         </div>
       </div>
 
@@ -324,19 +238,17 @@ export default function CandidatePage() {
 
       <main className="flex-1 p-4 sm:p-6 lg:p-8">
         <div className="max-w-7xl mx-auto space-y-6">
-          <MyCandidacyEditor onUpdated={() => loadCandidates(selectedClass)} />
+          <MyCandidacyEditor onUpdated={() => loadCandidates()} />
 
-          {!hasClass ? (
+          {!ownClass ? (
             <EmptyState
-              title="Select a Class"
-              description="Choose your department, year, and section above to see the Boys and Girls Class Representatives for that class."
+              title="No Class on File"
+              description="Your account is not linked to a department, year, and section yet. Contact the administration to be assigned a class."
             />
           ) : totalCount === 0 ? (
             <EmptyState
               title="No Candidates"
-              description={`No candidates are placed for ${selectedClass.department} ${selectedClass.year}${
-                selectedClass.section ? ` Section ${selectedClass.section}` : ""
-              } yet.`}
+              description={`No candidates are placed for ${classLabel} yet.`}
             />
           ) : (
             <>
