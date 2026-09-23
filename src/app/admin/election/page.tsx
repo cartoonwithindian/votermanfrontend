@@ -29,9 +29,9 @@ import {
 
 const STATUS_OPTIONS = ["DRAFT", "SCHEDULED", "OPEN", "CLOSED", "PUBLISHED"] as const;
 
-// The 22 real classes (TEST course excluded). {department, year, section}
+// All classes including the internal TEST course. {department, year, section}
 // matches the master candidate cohort matching used on the backend.
-const CREATE_CLASS_LIST: { department: string; year: string; section: string; label: string }[] = COURSES.filter((c) => c !== "TEST").flatMap((c: Course) =>
+const CREATE_CLASS_LIST: { department: string; year: string; section: string; label: string }[] = COURSES.flatMap((c: Course) =>
   getBatchesForCourse(c).map((b: Batch) => ({
     department: c,
     year: b.year,
