@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/Badge";
 import { adminApi, type AdminElectionRecord, type AdminConstituencyRecord, type ApprovedCandidateRow, type StudentClass } from "@/lib/api/admin";
 import { CourseSelect } from "@/components/ui/CourseSelect";
 import { BatchSelect } from "@/components/ui/BatchSelect";
-import { seatLabel } from "@/lib/class-data";
+import { COURSES, getBatchesForCourse, seatLabel, type Course, type Batch } from "@/lib/class-data";
 import {
   Vote,
   Calendar,
@@ -28,6 +28,21 @@ import {
 } from "lucide-react";
 
 const STATUS_OPTIONS = ["DRAFT", "SCHEDULED", "OPEN", "CLOSED", "PUBLISHED"] as const;
+
+// The 22 real classes (TEST course excluded). {department, year, section}
+// matches the master candidate cohort matching used on the backend.
+const CREATE_CLASS_LIST: { department: string; year: string; section: string; label: string }[] = COURSES.filter((c) => c !== "TEST").flatMap((c: Course) =>
+  getBatchesForCourse(c).map((b: Batch) => ({
+    department: c,
+    year: b.year,
+    section: b.section,
+    label: `${c} ${b.label}`,
+  }))
+);
+
+function createClassKey(cls: { department: string; year: string; section: string }): string {
+  return `${cls.department}|${cls.year}|${cls.section}`;
+}
 
 function StatusModal({
   isOpen,
@@ -178,6 +193,7 @@ export default function ElectionManagementPage() {
   // Create election
   const [createModalOpen, setCreateModalOpen] = useState(false);
   const [createForm, setCreateForm] = useState({ name: "", start_time: "", end_time: "" });
+  const [createClasses, setCreateClasses] = useState<Set<string>>(new Set(CREATE_CLASS_LIST.map(createClassKey)));
   const [createSaving, setCreateSaving] = useState(false);
   const [createError, setCreateError] = useState("");
 
@@ -477,6 +493,11 @@ export default function ElectionManagementPage() {
         name: createForm.name.trim(),
         start_time: createForm.start_time ? new Date(createForm.start_time).toISOString() : undefined,
         end_time: createForm.end_time ? new Date(createForm.end_time).toISOString() : undefined,
+        classes: CREATE_CLASS_LIST.filter((c) => createClasses.has(createClassKey(c))).map((c) => ({
+          department: c.department,
+          year: c.year,
+          section: c.section,
+        })),
       });
       setCreateModalOpen(false);
       setCreateForm({ name: "", start_time: "", end_time: "" });
@@ -1142,6 +1163,62 @@ export default function ElectionManagementPage() {
                     onChange={(e) => setCreateForm((f) => ({ ...f, end_time: e.target.value }))}
                     className="w-full border border-border-strong rounded-xl px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-primary-500"
                   />
+                </div>
+                <div>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="block text-sm font-medium text-text-primary">
+                      Classes ({createClasses.size}/{CREATE_CLASS_LIST.length})
+                    </label>
+                    <span className="flex gap-2 text-xs">
+                      <button
+                        type="button"
+                        onClick={() => setCreateClasses(new Set(CREATE_CLASS_LIST.map(createClassKey)))}
+                        className="text-primary-600 hover:text-primary-700 cursor-pointer"
+                      >
+                        Select all
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setCreateClasses(new Set())}
+                        className="text-text-muted hover:text-text-secondary cursor-pointer"
+                      >
+                        Clear
+                      </button>
+                    </span>
+                  </div>
+                  <div className="max-h-56 overflow-y-auto rounded-xl border border-border-strong divide-y divide-border-strong">
+                    {CREATE_CLASS_LIST.map((c) => {
+                      const key = createClassKey(c);
+                      const checked = createClasses.has(key);
+                      return (
+                        <label
+                          key={key}
+                          className="flex items-center gap-3 px-3 py-2 text-sm cursor-pointer hover:bg-primary-50/50"
+                        >
+                          <input
+                            type="checkbox"
+                            checked={checked}
+                            onChange={() => {
+                              setCreateClasses((prev) => {
+                                const next = new Set(prev);
+                                if (next.has(key)) next.delete(key);
+                                else next.add(key);
+                                return next;
+                              });
+                            }}
+                            className="rounded border-border-strong text-primary-600 focus:ring-primary-500"
+                          />
+                          <span className="font-medium text-text-primary">{c.label}</span>
+                          {c.section === "" && (
+                            <span className="ml-auto text-[11px] text-text-muted">section-less</span>
+                          )}
+                        </label>
+                      );
+                    })}
+                  </div>
+                  <p className="text-xs text-text-muted mt-1.5">
+                    Each selected class gets two CR seats (Boys/Girls). Candidates matching the class are auto-placed from the master candidate DB.
+                  </p>
                 </div>
               </div>
               {createError && (
