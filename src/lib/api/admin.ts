@@ -237,6 +237,12 @@ export const adminApi = {
   updatePosition: (id: number | string, body: { name?: string; description?: string; display_order?: number }) =>
     api.patch(`/admin/positions/${id}`, body),
 
+  // ---- Candidate management (real /admin/candidates) ----
+  updateCandidate: (id: number | string, body: { name?: string; description?: string; image_url?: string; department?: string; year?: string; section?: string | null; gender?: string }) =>
+    api.patch(`/admin/candidates/${id}`, body),
+  uploadCandidatePhoto: (dataUrl: string) =>
+    api.post<{ url: string; fileId: string; bucketId: string; folder: string }>("/uploads/photo", { image: dataUrl }),
+
   // ---- Whitelist (admin-only, seeded from Excel: only these emails can register) ----
   getWhitelist: (params?: { search?: string; department?: string; year_or_semester?: string; section?: string; is_registered?: string; page?: number; limit?: number }) => {
     const q = new URLSearchParams();

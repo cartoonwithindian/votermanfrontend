@@ -72,10 +72,13 @@ export interface ListCandidatesOptions {
   year?: string;
   section?: string;
   limit?: number;
+  scope?: string;
 }
 
 /** GET /candidates - all approved active candidates (public).
  *  Supports filtering by gender, department, year, section.
+ *  Admin sessions may pass scope=all to list ALL master candidates
+ *  (including unplaced canonical ones) for the management gallery.
  */
 export async function listCandidates(options?: ListCandidatesOptions): Promise<Candidate[]> {
   const queryParams = new URLSearchParams();
@@ -85,6 +88,7 @@ export async function listCandidates(options?: ListCandidatesOptions): Promise<C
   if (options?.year) queryParams.set('year', options.year);
   if (options?.section) queryParams.set('section', options.section);
   if (options?.limit) queryParams.set('limit', String(options.limit));
+  if (options?.scope) queryParams.set('scope', options.scope);
 
   const query = queryParams.toString() ? `?${queryParams.toString()}` : '';
   const rows = await api.get<CandidateRow[]>(`/candidates${query}`);
