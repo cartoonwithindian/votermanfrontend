@@ -11,6 +11,11 @@ const API_BASE = (
   process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000/api/v1"
 ).replace(/\/$/, "");
 
+/** Coerce an unknown payload into an array instead of crashing on .map. */
+function toArray<T>(v: T[] | null | undefined | unknown): T[] {
+  return Array.isArray(v) ? v : [];
+}
+
 export interface ElectionInfo {
   id: string;
   name: string;
@@ -86,7 +91,7 @@ interface ConstituencyRow {
 /** GET /elections - all elections. */
 export async function listElections(): Promise<ElectionInfo[]> {
   const rows = await api.get<ElectionRow[]>("/elections");
-  return (rows || []).map((e) => ({
+  return toArray<ElectionRow>(rows).map((e) => ({
     id: String(e.id),
     name: e.name || "",
     status: e.status,
@@ -102,7 +107,7 @@ export async function listElections(): Promise<ElectionInfo[]> {
  *  stale one that has no seats. */
 export async function findOpenElection(): Promise<ElectionInfo | null> {
   const list = await listElections();
-  const open = (list || []).filter((e) => e.status === "OPEN");
+  const open = toArray<ElectionInfo>(list).filter((e) => e.status === "OPEN");
   if (open.length === 0) return null;
   open.sort((a, b) => {
     const at = Date.parse(a.startTime || "") || 0;
@@ -122,7 +127,7 @@ export async function findOpenElection(): Promise<ElectionInfo | null> {
  */
 export async function findElectionWithBallot(): Promise<ElectionInfo | null> {
   const list = await listElections();
-  const open = (list || []).filter((e) => e.status === "OPEN");
+  const open = toArray<ElectionInfo>(list).filter((e) => e.status === "OPEN");
   open.sort((a, b) => {
     const at = Date.parse(a.startTime || "") || 0;
     const bt = Date.parse(b.startTime || "") || 0;
@@ -169,7 +174,7 @@ export async function fetchBallot(
   }
 
   const positions = await api.get<PositionRow[]>(`/constituencies/${constituency.id}/positions`);
-  for (const pos of positions || []) {
+  for (const pos of toArray<PositionRow>(positions)) {
     if (!pos || !pos.id) continue;
     let candidates: CandidateRow[];
     try {
@@ -179,7 +184,7 @@ export async function fetchBallot(
       if (status === 401 || status === 403) throw err;
       continue; // one broken position must not blank the whole ballot
     }
-    const mapped: BallotCandidate[] = (candidates || []).map((c) => ({
+    const mapped: BallotCandidate[] = toArray<CandidateRow>(candidates).map((c) => ({
       id: String(c.id),
       name: c.name || "",
       description: c.description || "",
@@ -215,7 +220,7 @@ export async function checkVoted(
     `/elections/${electionId}/votes/check${qs}`
   );
   return {
-    voted: (data?.voted_positions || []).map(String),
+    voted: toArray<number | string>(data?.voted_positions).map(String),
     canVote: data?.can_vote !== false,
   };
 }
@@ -314,7 +319,7 @@ function initialsOf(name: string): string {
 export function mapBallotToVotingPositions(
   ballot: BallotPosition[]
 ): VotingPosition[] {
-  return ballot.map((p, index) => ({
+  return toArray<BallotPosition>(ballot).map((p, index) => ({
     id: String(p.id),
     name: p.name,
     order: index,

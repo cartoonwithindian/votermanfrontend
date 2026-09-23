@@ -88,7 +88,7 @@ export async function listCandidates(options?: ListCandidatesOptions): Promise<C
 
   const query = queryParams.toString() ? `?${queryParams.toString()}` : '';
   const rows = await api.get<CandidateRow[]>(`/candidates${query}`);
-  return (rows || []).map(toCandidate);
+  return (Array.isArray(rows) ? rows : []).map(toCandidate);
 }
 
 /** GET /candidates/:id - single candidate (public). Returns null on miss. */

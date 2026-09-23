@@ -44,6 +44,12 @@ function createClassKey(cls: { department: string; year: string; section: string
   return `${cls.department}|${cls.year}|${cls.section}`;
 }
 
+const SCOPED_YEAR_TO_SEMESTER: Record<string, string> = {
+  "1st Year": "1 Sem",
+  "2nd Year": "3 Sem",
+  "3rd Year": "5 Sem",
+};
+
 function StatusModal({
   isOpen,
   title,
@@ -502,15 +508,28 @@ export default function ElectionManagementPage() {
     setCreateSaving(true);
     setCreateError("");
     try {
+      const selectedClasses = CREATE_CLASS_LIST.filter((c) => createClasses.has(createClassKey(c)));
+      const single = selectedClasses.length === 1 ? selectedClasses[0] : null;
+      const scope = single
+        ? {
+            department: single.department,
+            year: single.year,
+            section: single.section,
+            semester: SCOPED_YEAR_TO_SEMESTER[single.year] || "",
+          }
+        : null;
       await adminApi.createElection({
         name: createForm.name.trim(),
         start_time: createForm.start_time ? new Date(createForm.start_time).toISOString() : undefined,
         end_time: createForm.end_time ? new Date(createForm.end_time).toISOString() : undefined,
-        classes: CREATE_CLASS_LIST.filter((c) => createClasses.has(createClassKey(c))).map((c) => ({
+        classes: selectedClasses.map((c) => ({
           department: c.department,
           year: c.year,
           section: c.section,
         })),
+        ...(scope
+          ? { department: scope.department, year: scope.year, section: scope.section, semester: scope.semester }
+          : {}),
       });
       setCreateModalOpen(false);
       setCreateForm({ name: "", start_time: "", end_time: "" });
