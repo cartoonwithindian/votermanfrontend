@@ -36,6 +36,11 @@ export interface BallotPosition {
   candidates: BallotCandidate[];
 }
 
+export interface BallotSelections {
+  positionId: string;
+  candidateId: string;
+}
+
 export interface VoteReceipt {
   receiptId: string | null;
   receiptHash: string;
@@ -104,6 +109,35 @@ export async function findOpenElection(): Promise<ElectionInfo | null> {
     return bt - at || String(b.id).localeCompare(String(a.id));
   });
   return open[0] || null;
+}
+
+/**
+ * Find the election to vote in for the current student's class. Tries each
+ * open election (most recent first) and returns the first one whose
+ * my-constituency resolves to a non-empty set of positions, so a class with
+ * seats in an older election isn't shown an empty newer one. When no open
+ * election has a ballot for this class, falls back to the most recent open
+ * election so the caller can show an "open but nothing for your class" state.
+ */
+export async function findElectionWithBallot(): Promise<ElectionInfo | null> {
+  const list = await listElections();
+  const open = (list || []).filter((e) => e.status === "OPEN");
+  open.sort((a, b) => {
+    const at = Date.parse(a.startTime || "") || 0;
+    const bt = Date.parse(b.startTime || "") || 0;
+    return bt - at || String(b.id).localeCompare(String(a.id));
+  });
+  let fallback: ElectionInfo | null = null;
+  for (const election of open) {
+    try {
+      const ballot = await fetchBallot(election.id);
+      if (ballot.length > 0) return election;
+      if (!fallback) fallback = election;
+    } catch {
+      // Try the next open election if this one errored/failed to resolve.
+    }
+  }
+  return fallback;
 }
 
 /**
@@ -203,6 +237,37 @@ export async function castVote(
     receiptHash: r?.receiptHash || "",
     nullifier: r?.nullifier || null,
     createdAt: r?.createdAt || "",
+  };
+}
+
+export interface SubmitBallotResult {
+  success: boolean;
+  count: number;
+  receipts: VoteReceipt[];
+}
+
+/** POST /elections/:id/votes/ballot - submit the entire ballot atomically.
+ *  All selections succeed together or none are stored (DB transaction /
+ *  no-partial on the backend). Duplicate-vote races surface as 409. */
+export async function submitBallot(
+  electionId: string,
+  constituencyId: string,
+  selections: BallotSelections[]
+): Promise<SubmitBallotResult> {
+  const data = await api.post<{ data?: { success?: boolean; count?: number; receipts?: VoteReceipt[] } }>(
+    `/elections/${electionId}/votes/ballot`,
+    {
+      constituency_id: constituencyId,
+      selections: selections.map((s) => ({
+        positionId: s.positionId,
+        candidateId: s.candidateId,
+      })),
+    }
+  );
+  return {
+    success: data?.data?.success !== false,
+    count: data?.data?.count ?? selections.length,
+    receipts: data?.data?.receipts || [],
   };
 }
 

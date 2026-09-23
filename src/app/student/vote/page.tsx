@@ -13,7 +13,7 @@ import { VotingNavigation } from "@/components/voting/VotingNavigation";
 import { VotingProvider, useVoting } from "@/components/voting/VotingContext";
 import { AlreadyVotedState, VotingClosedState } from "@/components/voting/VotingStates";
 import {
-  findOpenElection,
+  findElectionWithBallot,
   fetchBallot,
   checkVoted,
   mapBallotToVotingPositions,
@@ -43,7 +43,7 @@ function VotePageInner() {
     let alive = true;
     (async () => {
       try {
-        const election = await findOpenElection();
+        const election = await findElectionWithBallot();
         if (!alive) return;
         if (!election) {
           setState({ phase: "closed" });

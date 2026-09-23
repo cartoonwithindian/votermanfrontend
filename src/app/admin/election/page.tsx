@@ -331,8 +331,7 @@ export default function ElectionManagementPage() {
         ? res
         : ((res as { data?: StudentClass[] }).data as StudentClass[]) || [];
       setDetectedClasses(classes);
-      // Auto-select all classes by default
-      setSelectedClasses(new Set(classes.map(c => `${c.department}|${c.year_normalized}|${c.section}`)));
+      setSelectedClasses(new Set());
     } catch {
       setDetectedClasses([]);
     }

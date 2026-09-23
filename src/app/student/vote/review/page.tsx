@@ -11,13 +11,13 @@ import { PrivacyNotice } from "@/components/voting/PrivacyNotice";
 import { ConfirmationModal } from "@/components/voting/ConfirmationModal";
 import { VotingProvider, useVoting } from "@/components/voting/VotingContext";
 import {
-  findOpenElection,
+  listElections,
   fetchBallot,
   checkVoted,
-  castVote,
+  submitBallot,
   mapBallotToVotingPositions,
 } from "@/lib/voting-api";
-import type { VotingPosition, BallotSelection } from "@/lib/election-voting-data";
+import type { VotingPosition } from "@/lib/election-voting-data";
 import { AlertCircle } from "lucide-react";
 
 const STEPS = ["Select Candidates", "Review Ballot", "Confirm Vote"];
@@ -40,30 +40,36 @@ function ReviewPageInner({ searchParams }: { searchParams: { get(key: string): s
     (async () => {
       try {
         const queryElection = (searchParams?.get("election") || "").trim();
-        let election;
-        if (queryElection) {
-          const list = await findOpenElection().catch(() => null);
-          const match = list && String(list.id) === queryElection ? list : null;
-          if (!match) {
-            // Fall back to whichever election is open.
-            election = list;
-          } else {
-            election = match;
-          }
-        } else {
-          election = await findOpenElection();
-        }
+        const open = (await listElections().catch(() => []))
+          .filter((e) => e.status === "OPEN")
+          .map((e) => String(e.id));
 
-        if (!alive) return;
-        if (!election) {
-          setLoadError("There is no election open for voting right now.");
+        // Strict election from the URL: vote in exactly the election the
+        // voter chose. No silent fallback to some other open election.
+        const electionIdFromUrl = queryElection
+          ? open.includes(queryElection)
+            ? queryElection
+            : null
+          : open[0] || null;
+
+        if (!electionIdFromUrl) {
+          setLoadError(
+            queryElection
+              ? "This election is not open for voting right now."
+              : "There is no election open for voting right now."
+          );
           setLoading(false);
           return;
         }
 
-        const ballot = await fetchBallot(election.id);
+        const ballot = await fetchBallot(electionIdFromUrl);
         if (!alive) return;
-        const check = await checkVoted(election.id, ballot.map((p) => p.id));
+        if (ballot.length === 0) {
+          setLoadError("No voting positions are available for your class in this election.");
+          setLoading(false);
+          return;
+        }
+        const check = await checkVoted(electionIdFromUrl, ballot.map((p) => p.id));
         if (!alive) return;
 
         const remaining = check.voted.length > 0
@@ -79,7 +85,7 @@ function ReviewPageInner({ searchParams }: { searchParams: { get(key: string): s
         const uiPositions = mapBallotToVotingPositions(remaining);
         setPositions(uiPositions);
         seedSelections(uiPositions);
-        setElectionId(election.id);
+        setElectionId(electionIdFromUrl);
       } catch (err) {
         if (!alive) return;
         const status = (err as { status?: number })?.status;
@@ -113,29 +119,25 @@ function ReviewPageInner({ searchParams }: { searchParams: { get(key: string): s
     setIsSubmitting(true);
     setSubmitError(null);
 
+    const constituencyId = positions[0]?.constituencyId;
     const toSubmit = positions
-      .map((p) => ({ position: p, selection: selections.find((s) => s.positionId === p.id) }))
+      .map((p) => ({
+        positionId: p.id,
+        candidateId: selections.find((s) => s.positionId === p.id)?.candidateId,
+      }))
       .filter(
-        (x): x is { position: VotingPosition; selection: BallotSelection & { candidateId: string } } =>
-          !!x.selection && typeof x.selection.candidateId === "string"
-      )
-      .map((x) => ({
-        position: x.position,
-        candidateId: String(x.selection.candidateId),
-      }));
+        (x): x is { positionId: string; candidateId: string } => !!x.candidateId
+      );
+
+    if (constituencyId === undefined || toSubmit.length === 0) {
+      setIsSubmitting(false);
+      setShowModal(false);
+      setSubmitError("Your ballot is incomplete. Please review your selections.");
+      return;
+    }
 
     try {
-      for (const { position, candidateId } of toSubmit) {
-        if (position.constituencyId === undefined) {
-          throw new Error("Position is missing constituency information.");
-        }
-        await castVote(
-          electionId,
-          position.constituencyId,
-          position.id,
-          candidateId
-        );
-      }
+      await submitBallot(electionId, constituencyId, toSubmit);
     } catch (err) {
       setIsSubmitting(false);
       setShowModal(false);
@@ -148,7 +150,7 @@ function ReviewPageInner({ searchParams }: { searchParams: { get(key: string): s
         status === 401
           ? "Your session has expired. Please sign in again."
           : status === 409
-            ? "You have already voted for one of these positions. Your ballot was not resubmitted."
+            ? "You have already voted for one or more of these positions. Your ballot was not submitted."
             : status === 403
               ? "You are not eligible to vote in this election."
               : message
@@ -156,7 +158,7 @@ function ReviewPageInner({ searchParams }: { searchParams: { get(key: string): s
       return;
     }
 
-    // All positions submitted - remember the result for the success screen.
+    // One atomic ballot submitted - remember the result for the success screen.
     try {
       window.sessionStorage.setItem(
         "campusvote_last_ballot",
