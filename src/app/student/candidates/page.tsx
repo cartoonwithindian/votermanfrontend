@@ -5,13 +5,16 @@ import Link from "next/link";
 import { Scale, CheckCircle2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { listCandidates } from "@/lib/candidates-api";
-import { studentApi, type StudentProfile } from "@/lib/api/students";
+import { studentApi } from "@/lib/api/students";
 import type { Candidate } from "@/lib/candidate-data";
+import {
+  getBatchesForCourse,
+  type Course,
+  type Section,
+  type Year,
+} from "@/lib/class-data";
 
 import { CandidateGrid } from "@/components/candidate/CandidateGrid";
-import { CandidateSearch } from "@/components/candidate/CandidateSearch";
-import { CandidateFilters } from "@/components/candidate/CandidateFilters";
-import { CandidateSort } from "@/components/candidate/CandidateSort";
 import { CandidateCount } from "@/components/candidate/CandidateCount";
 import { MyCandidacyEditor } from "@/components/candidate/MyCandidacyEditor";
 import { EmptyState } from "@/components/ui/EmptyState";
@@ -27,31 +30,32 @@ export default function CandidatePage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // The logged-in student's own class — the candidate list is scoped to this
-  // course / year / section (server-enforced), so only their cohort shows.
-  const [myClass, setMyClass] = useState<Pick<StudentProfile, "department" | "year" | "section"> | null>(null);
-
-  const [searchQuery, setSearchQuery] = useState("");
-  const [filters, setFilters] = useState({
-    gender: "all",
+  // Selected class — defaults to the student's own course/year/section.
+  const [selectedClass, setSelectedClass] = useState({
+    department: "",
+    year: "" as Year | "",
+    section: "" as Section,
   });
-  const [sortBy, setSortBy] = useState<"name-asc" | "name-desc">("name-asc");
 
   const [comparedIds, setComparedIds] = useState<Set<string>>(new Set());
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
-  // Load the student's own class for the cohort banner. Non-fatal: the
-  // backend still scopes by the session, this is display-only.
+  // Pre-select the logged-in student's own class when available.
   useEffect(() => {
     let cancelled = false;
     studentApi
       .getProfile()
       .then((profile) => {
-        if (!cancelled && profile?.department && profile.year && profile.section) {
-          setMyClass({
+        if (
+          !cancelled &&
+          profile?.department &&
+          profile.year &&
+          profile.department in { MBA: 1, MCA: 1, BBA: 1, BCom: 1, BCA: 1, TEST: 1 }
+        ) {
+          setSelectedClass({
             department: profile.department,
-            year: profile.year,
-            section: profile.section,
+            year: profile.year as Year,
+            section: (profile.section || "") as Section,
           });
         }
       })
@@ -61,24 +65,24 @@ export default function CandidatePage() {
     };
   }, []);
 
-  // Load candidates from API
-  const loadCandidates = useCallback(async () => {
-    setLoading(true);
-    setError("");
-    try {
-      // Map UI gender values to backend values
-      // "girls" -> "Female", "boys" -> "Male"
-      const genderMap: Record<string, string> = {
-        girls: "Female",
-        boys: "Male",
-      };
-      const backendGender = filters.gender !== "all" ? genderMap[filters.gender] || filters.gender : undefined;
+  const classYears: Year[] =
+    selectedClass.department === ""
+      ? []
+      : Array.from(
+          new Set(
+            getBatchesForCourse(selectedClass.department as Course).map((b) => b.year)
+          )
+        );
 
-      // Only gender is filterable here. The list itself is scoped to the
-      // student's own course / year / section on the server — never sent as
-      // client-chosen filters.
+  // Load candidates for the selected class from the API
+  const loadCandidates = useCallback(async (cls: typeof selectedClass) => {
+    setLoading(true);
+    setError(null);
+    try {
       const data = await listCandidates({
-        gender: backendGender,
+        department: cls.department || undefined,
+        year: cls.year || undefined,
+        section: cls.section || undefined,
       });
       setCandidates(data);
     } catch (err) {
@@ -88,17 +92,30 @@ export default function CandidatePage() {
     } finally {
       setLoading(false);
     }
-  }, [filters]);
+  }, []);
 
-  React.useEffect(() => {
-    loadCandidates();
-  }, [loadCandidates]);
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const data = await listCandidates({
+        department: selectedClass.department || undefined,
+        year: selectedClass.year || undefined,
+        section: selectedClass.section || undefined,
+      });
+      if (cancelled) return;
+      setCandidates(data);
+      setLoading(false);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedClass]);
 
   // Event-handler retry (loading flag is set here, not inside the effect).
   const retry = () => {
     setLoading(true);
     setError(null);
-    loadCandidates();
+    loadCandidates(selectedClass);
   };
 
   const toggleCompare = (id: string) => {
@@ -122,27 +139,20 @@ export default function CandidatePage() {
   const clearCompare = () => setComparedIds(new Set());
   const clearSelect = () => setSelectedIds(new Set());
 
-  const filteredCandidates = useMemo(() => {
-    let results = [...candidates];
-
-    if (searchQuery.trim()) {
-      const lower = searchQuery.toLowerCase();
-      results = results.filter(
-        (c) =>
-          c.name.toLowerCase().includes(lower) ||
-          c.id.toLowerCase().includes(lower) ||
-          c.department.toLowerCase().includes(lower)
-      );
+  // Split the class's candidates into the Boys and Girls CR seats.
+  const { boys, girls } = useMemo(() => {
+    const b: Candidate[] = [];
+    const g: Candidate[] = [];
+    for (const c of candidates) {
+      const seat = (c.position || "").toLowerCase();
+      if (seat.includes("girl") || c.gender === "Female") g.push(c);
+      else b.push(c);
     }
+    return { boys: b, girls: g };
+  }, [candidates]);
 
-    if (sortBy === "name-asc") {
-      results.sort((a, b) => a.name.localeCompare(b.name));
-    } else {
-      results.sort((a, b) => b.name.localeCompare(a.name));
-    }
-
-    return results;
-  }, [candidates, searchQuery, sortBy]);
+  const hasClass = Boolean(selectedClass.department && selectedClass.year);
+  const totalCount = candidates.length;
 
   if (loading) {
     return (
@@ -179,21 +189,86 @@ export default function CandidatePage() {
               <span className="text-text-secondary">Voting Open</span>
             </div>
           </div>
-        </div>
-      </div>
 
-      {myClass && (
-        <div className="border-b border-border shrink-0">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-2.5">
-            <p className="text-sm text-text-secondary">
-              Showing candidates of your class:{" "}
-              <span className="font-medium text-text-primary">
-                {myClass.department} • {myClass.year} • Section {myClass.section}
-              </span>
-            </p>
+          {/* Class picker — pick department + year + section to view that class's CR seats */}
+          <div className="grid gap-3 sm:grid-cols-3 mt-5 max-w-3xl">
+            <div>
+              <label className="text-xs font-medium text-gray-500 uppercase tracking-wide block mb-1">
+                Department
+              </label>
+              <select
+                value={selectedClass.department}
+                onChange={(e) =>
+                  setSelectedClass({
+                    department: e.target.value,
+                    year: "",
+                    section: "",
+                  })
+                }
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="">Select department</option>
+                {["MBA", "MCA", "BBA", "BCom", "BCA", "TEST"].map((d) => (
+                  <option key={d} value={d}>
+                    {d}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="text-xs font-medium text-gray-500 uppercase tracking-wide block mb-1">
+                Year
+              </label>
+              <select
+                value={selectedClass.year}
+                disabled={!selectedClass.department}
+                onChange={(e) =>
+                  setSelectedClass((s) => ({ ...s, year: e.target.value as Year }))
+                }
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
+              >
+                <option value="">Select year</option>
+                {classYears.map((y) => (
+                  <option key={y} value={y}>
+                    {y}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="text-xs font-medium text-gray-500 uppercase tracking-wide block mb-1">
+                Section
+              </label>
+              <select
+                value={selectedClass.section}
+                disabled={!selectedClass.department}
+                onChange={(e) =>
+                  setSelectedClass((s) => ({ ...s, section: e.target.value as Section }))
+                }
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
+              >
+                <option value="">Select section</option>
+                {(() => {
+                  const secs = selectedClass.department
+                    ? Array.from(
+                        new Set(
+                          getBatchesForCourse(selectedClass.department as Course).map(
+                            (b) => b.section
+                          )
+                        )
+                      )
+                    : [];
+                  return secs.map((s) => (
+                    <option key={s || "__none"} value={s}>
+                      {s || "No section"}
+                    </option>
+                  ));
+                })()}
+              </select>
+            </div>
           </div>
         </div>
-      )}
+      </div>
 
       {comparedIds.size > 0 && (
         <div className="bg-primary-50 border-b border-primary-100 px-4 sm:px-6 lg:px-8 py-3">
@@ -248,48 +323,63 @@ export default function CandidatePage() {
       )}
 
       <main className="flex-1 p-4 sm:p-6 lg:p-8">
-        <div className="max-w-7xl mx-auto space-y-5">
-          <MyCandidacyEditor onUpdated={() => loadCandidates()} />
+        <div className="max-w-7xl mx-auto space-y-6">
+          <MyCandidacyEditor onUpdated={() => loadCandidates(selectedClass)} />
 
-          <CandidateSearch
-            onSearchChange={setSearchQuery}
-            placeholder="Search candidates..."
-          />
-
-          <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end sm:gap-4">
-            <div className="flex-1 min-w-0">
-              <CandidateFilters filters={filters} onFilterChange={setFilters} />
-            </div>
-            <div className="flex items-center justify-between gap-3 w-full sm:w-auto sm:justify-start sm:shrink-0">
-              <CandidateSort sortBy={sortBy} onSortChange={(v) => setSortBy(v as "name-asc" | "name-desc")} />
-              <CandidateCount count={filteredCandidates.length} />
-            </div>
-          </div>
-
-          {filteredCandidates.length > 0 ? (
-            <CandidateGrid
-              candidates={filteredCandidates}
-              onCompare={toggleCompare}
-              comparedIds={comparedIds}
-              onSelect={toggleSelect}
-              selectedIds={selectedIds}
+          {!hasClass ? (
+            <EmptyState
+              title="Select a Class"
+              description="Choose your department, year, and section above to see the Boys and Girls Class Representatives for that class."
+            />
+          ) : totalCount === 0 ? (
+            <EmptyState
+              title="No Candidates"
+              description={`No candidates are placed for ${selectedClass.department} ${selectedClass.year}${
+                selectedClass.section ? ` Section ${selectedClass.section}` : ""
+              } yet.`}
             />
           ) : (
-            <EmptyState
-              title="No Candidates Found"
-              description="No approved candidates yet. Check back after elections open."
-              action={
-                <Button
-                  variant="secondary"
-                  onClick={() => {
-                    setSearchQuery("");
-                    setFilters({ gender: "all" });
-                  }}
-                >
-                  Clear Filters
-                </Button>
-              }
-            />
+            <>
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <h2 className="font-semibold text-text-primary text-lg">
+                    Boys — Class Representative
+                  </h2>
+                  <CandidateCount count={boys.length} />
+                </div>
+                {boys.length > 0 ? (
+                  <CandidateGrid
+                    candidates={boys}
+                    onCompare={toggleCompare}
+                    comparedIds={comparedIds}
+                    onSelect={toggleSelect}
+                    selectedIds={selectedIds}
+                  />
+                ) : (
+                  <p className="text-sm text-gray-400">No candidates</p>
+                )}
+              </div>
+
+              <div className="pt-4">
+                <div className="flex items-center justify-between mb-2">
+                  <h2 className="font-semibold text-text-primary text-lg">
+                    Girls — Class Representative
+                  </h2>
+                  <CandidateCount count={girls.length} />
+                </div>
+                {girls.length > 0 ? (
+                  <CandidateGrid
+                    candidates={girls}
+                    onCompare={toggleCompare}
+                    comparedIds={comparedIds}
+                    onSelect={toggleSelect}
+                    selectedIds={selectedIds}
+                  />
+                ) : (
+                  <p className="text-sm text-gray-400">No candidates</p>
+                )}
+              </div>
+            </>
           )}
         </div>
       </main>
