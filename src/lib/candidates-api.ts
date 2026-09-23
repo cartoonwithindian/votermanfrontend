@@ -71,6 +71,7 @@ export interface ListCandidatesOptions {
   department?: string;
   year?: string;
   section?: string;
+  limit?: number;
 }
 
 /** GET /candidates - all approved active candidates (public).
@@ -83,6 +84,7 @@ export async function listCandidates(options?: ListCandidatesOptions): Promise<C
   if (options?.department) queryParams.set('department', options.department);
   if (options?.year) queryParams.set('year', options.year);
   if (options?.section) queryParams.set('section', options.section);
+  if (options?.limit) queryParams.set('limit', String(options.limit));
 
   const query = queryParams.toString() ? `?${queryParams.toString()}` : '';
   const rows = await api.get<CandidateRow[]>(`/candidates${query}`);
