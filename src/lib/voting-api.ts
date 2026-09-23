@@ -12,7 +12,7 @@ const API_BASE = (
 ).replace(/\/$/, "");
 
 export interface ElectionInfo {
-  id: number;
+  id: string;
   name: string;
   status: string; // OPEN | SCHEDULED | CLOSED | DRAFT | PUBLISHED
   startTime: string | null;
@@ -21,15 +21,15 @@ export interface ElectionInfo {
 }
 
 export interface BallotCandidate {
-  id: number;
+  id: string;
   name: string;
   description: string;
   photo: string | null;
 }
 
 export interface BallotPosition {
-  id: number;
-  constituencyId: number;
+  id: string;
+  constituencyId: string;
   name: string;
   description: string;
   order: number;
@@ -37,14 +37,14 @@ export interface BallotPosition {
 }
 
 export interface VoteReceipt {
-  receiptId: number | null;
+  receiptId: string | null;
   receiptHash: string;
   nullifier: string | null;
   createdAt: string;
 }
 
 interface ElectionRow {
-  id: number;
+  id: number | string;
   name: string;
   status: string;
   start_time: string | null;
@@ -53,23 +53,23 @@ interface ElectionRow {
 }
 
 interface PositionRow {
-  id: number;
-  constituency_id: number | null;
+  id: number | string;
+  constituency_id: number | string | null;
   name: string;
   description?: string | null;
   display_order?: number | null;
 }
 
 interface CandidateRow {
-  id: number;
+  id: number | string;
   name: string;
   description?: string | null;
   image_url?: string | null;
 }
 
 interface ConstituencyRow {
-  id: number;
-  election_id: number;
+  id: number | string;
+  election_id: number | string;
   department: string;
   year: string;
   section: string;
@@ -81,7 +81,7 @@ interface ConstituencyRow {
 export async function listElections(): Promise<ElectionInfo[]> {
   const rows = await api.get<ElectionRow[]>("/elections");
   return (rows || []).map((e) => ({
-    id: Number(e.id),
+    id: String(e.id),
     name: e.name || "",
     status: e.status,
     startTime: e.start_time || null,
@@ -101,7 +101,7 @@ export async function findOpenElection(): Promise<ElectionInfo | null> {
   open.sort((a, b) => {
     const at = Date.parse(a.startTime || "") || 0;
     const bt = Date.parse(b.startTime || "") || 0;
-    return bt - at || b.id - a.id;
+    return bt - at || String(b.id).localeCompare(String(a.id));
   });
   return open[0] || null;
 }
@@ -114,7 +114,7 @@ export async function findOpenElection(): Promise<ElectionInfo | null> {
  * never other sections or club positions. Positions with no active
  * candidates are omitted.
  */
-export async function fetchBallot(electionId: number): Promise<BallotPosition[]> {
+export async function fetchBallot(electionId: string): Promise<BallotPosition[]> {
   const out: BallotPosition[] = [];
 
   // The student's own CR seat (backend resolves by department/year/section).
@@ -143,15 +143,15 @@ export async function fetchBallot(electionId: number): Promise<BallotPosition[]>
       continue; // one broken position must not blank the whole ballot
     }
     const mapped: BallotCandidate[] = (candidates || []).map((c) => ({
-      id: Number(c.id),
+      id: String(c.id),
       name: c.name || "",
       description: c.description || "",
       photo: c.image_url || null,
     }));
     if (mapped.length === 0) continue;
     out.push({
-      id: Number(pos.id),
-      constituencyId: Number(constituency.id),
+      id: String(pos.id),
+      constituencyId: String(constituency.id),
       name: pos.name || "",
       description: pos.description || "",
       order: Number(pos.display_order) || out.length,
@@ -168,17 +168,17 @@ export async function fetchBallot(electionId: number): Promise<BallotPosition[]>
  * Pass the ballot position ids to learn whether any remain.
  */
 export async function checkVoted(
-  electionId: number,
-  positionIds?: number[]
-): Promise<{ voted: number[]; canVote: boolean }> {
+  electionId: string,
+  positionIds?: string[]
+): Promise<{ voted: string[]; canVote: boolean }> {
   const qs = positionIds && positionIds.length > 0
     ? `?position_ids=${positionIds.join(",")}`
     : "";
-  const data = await api.get<{ voted_positions?: number[]; can_vote?: boolean }>(
+  const data = await api.get<{ voted_positions?: (number | string)[]; can_vote?: boolean }>(
     `/elections/${electionId}/votes/check${qs}`
   );
   return {
-    voted: data?.voted_positions || [],
+    voted: (data?.voted_positions || []).map(String),
     canVote: data?.can_vote !== false,
   };
 }
@@ -186,10 +186,10 @@ export async function checkVoted(
 /** POST /elections/:id/votes - cast one Class Representative vote
  *  (one per position), scoped to the student's constituency. */
 export async function castVote(
-  electionId: number,
-  constituencyId: number | undefined,
-  positionId: number,
-  candidateId: number
+  electionId: string,
+  constituencyId: string | undefined,
+  positionId: string,
+  candidateId: string
 ): Promise<VoteReceipt> {
   const data = await api.post<{ receipt?: VoteReceipt }>(`/elections/${electionId}/votes`, {
     election_id: electionId,
@@ -199,7 +199,7 @@ export async function castVote(
   });
   const r = data?.receipt;
   return {
-    receiptId: r?.receiptId != null ? Number(r.receiptId) : null,
+    receiptId: r?.receiptId != null ? String(r.receiptId) : null,
     receiptHash: r?.receiptHash || "",
     nullifier: r?.nullifier || null,
     createdAt: r?.createdAt || "",
@@ -208,7 +208,7 @@ export async function castVote(
 
 /** GET /elections/:id/votes/receipt - my receipt for an election (may 404). */
 export async function getMyElectionReceipt(
-  electionId: number
+  electionId: string
 ): Promise<VoteReceipt | null> {
   try {
     const data = await api.get<{ receipt?: VoteReceipt }>(
@@ -217,7 +217,7 @@ export async function getMyElectionReceipt(
     const r = data?.receipt;
     if (!r) return null;
     return {
-      receiptId: r.receiptId != null ? Number(r.receiptId) : null,
+      receiptId: r.receiptId != null ? String(r.receiptId) : null,
       receiptHash: r.receiptHash || "",
       nullifier: r.nullifier || null,
       createdAt: r.createdAt || "",
@@ -228,7 +228,7 @@ export async function getMyElectionReceipt(
 }
 
 export interface PublicReceipt {
-  receiptId: number | null;
+  receiptId: string | null;
   receiptHash: string;
   electionName: string;
   electionStatus: string;
@@ -278,7 +278,7 @@ export async function verifyReceiptPublic(
     return {
       valid: true,
       receipt: {
-        receiptId: r.receiptId != null ? Number(r.receiptId) : null,
+        receiptId: r.receiptId != null ? String(r.receiptId) : null,
         receiptHash: r.receiptHash || "",
         electionName: r.electionName || "",
         electionStatus: r.electionStatus || "",

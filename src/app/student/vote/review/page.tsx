@@ -27,7 +27,7 @@ function ReviewPageInner({ searchParams }: { searchParams: { get(key: string): s
   const { selections, seedSelections, resetSelections } = useVoting();
 
   const [positions, setPositions] = useState<VotingPosition[]>([]);
-  const [electionId, setElectionId] = useState<number | null>(null);
+  const [electionId, setElectionId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [isConfirmed, setIsConfirmed] = useState(false);
@@ -39,11 +39,11 @@ function ReviewPageInner({ searchParams }: { searchParams: { get(key: string): s
     let alive = true;
     (async () => {
       try {
-        const queryElection = Number(searchParams?.get("election") || 0);
+        const queryElection = (searchParams?.get("election") || "").trim();
         let election;
         if (queryElection) {
           const list = await findOpenElection().catch(() => null);
-          const match = list && list.id === queryElection ? list : null;
+          const match = list && String(list.id) === queryElection ? list : null;
           if (!match) {
             // Fall back to whichever election is open.
             election = list;
@@ -121,7 +121,7 @@ function ReviewPageInner({ searchParams }: { searchParams: { get(key: string): s
       )
       .map((x) => ({
         position: x.position,
-        candidateId: Number(x.selection.candidateId),
+        candidateId: String(x.selection.candidateId),
       }));
 
     try {
@@ -132,7 +132,7 @@ function ReviewPageInner({ searchParams }: { searchParams: { get(key: string): s
         await castVote(
           electionId,
           position.constituencyId,
-          Number(position.id),
+          position.id,
           candidateId
         );
       }

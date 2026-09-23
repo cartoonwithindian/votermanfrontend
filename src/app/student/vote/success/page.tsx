@@ -12,7 +12,7 @@ import { CheckCircle2, ArrowLeft, FileText } from "lucide-react";
 const STEPS = ["Select Candidates", "Review Ballot", "Confirm Vote"];
 
 interface LastBallot {
-  electionId?: number;
+  electionId?: string;
   submittedAt?: string;
   submittedPositions?: number;
 }

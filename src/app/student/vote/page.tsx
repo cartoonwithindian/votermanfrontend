@@ -29,7 +29,7 @@ type PageState =
   | { phase: "noauth" }
   | { phase: "closed" }
   | { phase: "already" }
-  | { phase: "ready"; electionId: number; electionName: string };
+  | { phase: "ready"; electionId: string; electionName: string };
 
 function VotePageInner() {
   const router = useRouter();

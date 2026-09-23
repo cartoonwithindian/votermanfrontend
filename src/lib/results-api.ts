@@ -80,7 +80,7 @@ const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3000/api/v
 
 /** Fetch results for an election. Throws ResultsNotPublishedError when 403. */
 export async function fetchElectionResults(
-  electionId: number
+  electionId: string | number
 ): Promise<MappedElectionResults> {
   const res = await fetch(`${API_BASE}/elections/${electionId}/results`, {
     cache: "no-store",

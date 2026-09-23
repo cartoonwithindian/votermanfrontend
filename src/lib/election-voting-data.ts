@@ -22,7 +22,7 @@ export interface VotingPosition {
   order: number;
   candidates: VotingCandidate[];
   /** Real backend constituency id for the Class Representative position. */
-  constituencyId?: number;
+  constituencyId?: string;
 }
 
 export interface VotingElection {
