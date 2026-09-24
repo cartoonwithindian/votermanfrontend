@@ -205,6 +205,36 @@ export async function fetchBallot(
   return { positions: out, exists: true, votingOpen: constituency.voting_open !== false };
 }
 
+export interface ClassCandidate {
+  id: string;
+  name: string;
+  gender: string | null;
+  photo: string | null;
+}
+
+export interface ClassCandidateSeat {
+  position: { id: string; name: string };
+  candidates: ClassCandidate[];
+}
+
+export interface MyClassCandidates {
+  election: { id: string; name: string; status: string } | null;
+  constituency: { id: string; name: string; department: string; year: string; section: string; voting_open: boolean } | null;
+  seats: ClassCandidateSeat[];
+}
+
+/** GET /elections/my-class-candidates - candidates standing in the
+ *  authenticated student's own class, regardless of election status. */
+export async function fetchMyClassCandidates(): Promise<MyClassCandidates> {
+  const res = await api.get<MyClassCandidates>("/elections/my-class-candidates");
+  const data = (res || {}) as MyClassCandidates;
+  return {
+    election: data.election || null,
+    constituency: data.constituency || null,
+    seats: toArray<ClassCandidateSeat>(data.seats),
+  };
+}
+
 /**
  * GET /elections/:id/votes/check - which positions this student already voted.
  * Pass the ballot position ids to learn whether any remain.

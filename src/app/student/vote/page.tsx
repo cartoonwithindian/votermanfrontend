@@ -15,9 +15,11 @@ import { AlreadyVotedState, VotingClosedState } from "@/components/voting/Voting
 import {
   findElectionWithBallot,
   fetchBallot,
+  fetchMyClassCandidates,
   checkVoted,
   mapBallotToVotingPositions,
 } from "@/lib/voting-api";
+import type { MyClassCandidates } from "@/lib/voting-api";
 import type { VotingPosition } from "@/lib/election-voting-data";
 import { AlertTriangle, AlertCircle } from "lucide-react";
 
@@ -28,6 +30,7 @@ type PageState =
   | { phase: "error"; message: string }
   | { phase: "noauth" }
   | { phase: "closed" }
+  | { phase: "preview"; preview: MyClassCandidates }
   | { phase: "already" }
   | { phase: "ready"; electionId: string; electionName: string };
 
@@ -46,7 +49,24 @@ function VotePageInner() {
         const election = await findElectionWithBallot();
         if (!alive) return;
         if (!election) {
-          setState({ phase: "closed" });
+          try {
+            const preview = await fetchMyClassCandidates();
+            if (!alive) return;
+            const total = preview.seats.reduce((n, s) => n + s.candidates.length, 0);
+            if (preview.election && total > 0) {
+              setState({ phase: "preview", preview });
+            } else {
+              setState({ phase: "closed" });
+            }
+          } catch (err) {
+            if (!alive) return;
+            const status = (err as { status?: number })?.status;
+            if (status === 401) {
+              setState({ phase: "noauth" });
+            } else {
+              setState({ phase: "closed" });
+            }
+          }
           return;
         }
 
@@ -177,6 +197,63 @@ function VotePageInner() {
 
   if (state.phase === "closed") {
     return <VotingClosedState />;
+  }
+
+  if (state.phase === "preview") {
+    const preview = state.preview;
+    const status = preview.election?.status || "";
+    const upcoming = status === "DRAFT" || status === "SCHEDULED";
+    return (
+      <StudentLayout>
+        <div className="max-w-7xl mx-auto w-full space-y-6">
+          <div>
+            <div className="flex flex-wrap items-center gap-2 mb-3">
+              <Badge variant="info" className="text-[10px]">{preview.election?.name}</Badge>
+              <Badge variant={upcoming ? "warning" : "neutral"} className="text-[10px]">{status}</Badge>
+            </div>
+            <h1 className="text-2xl font-bold text-text-primary mb-1">Candidates in Your Class</h1>
+            <p className="text-sm text-text-secondary">
+              {preview.constituency?.department} · {preview.constituency?.year}
+              {preview.constituency?.section ? ` · Sec ${preview.constituency.section}` : ""} —{" "}
+              {upcoming
+                ? "voting hasn't started yet. These are the candidates standing in your class."
+                : "voting has ended for this election."}
+            </p>
+          </div>
+          {preview.seats.map((seat) => (
+            <Card key={seat.position.id} className="border-border overflow-hidden">
+              <div className="p-4 sm:p-5 border-b border-border bg-primary-50/50">
+                <h2 className="text-lg font-bold text-text-primary">{seat.position.name}</h2>
+                <p className="text-xs text-text-secondary mt-1">
+                  {seat.candidates.length} candidate{seat.candidates.length === 1 ? "" : "s"} standing
+                </p>
+              </div>
+              <div className="p-4 sm:p-5 grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {seat.candidates.map((candidate) => (
+                  <div key={candidate.id} className="flex items-center gap-3 p-3 rounded-xl border border-border">
+                    {candidate.photo ? (
+                      <img src={candidate.photo} alt={candidate.name} className="h-11 w-11 rounded-full object-cover shrink-0" />
+                    ) : (
+                      <div className="h-11 w-11 rounded-full bg-primary-50 flex items-center justify-center shrink-0">
+                        <span className="text-sm font-bold text-primary-600">
+                          {candidate.name.split(" ").map((w) => w[0]).slice(0, 2).join("")}
+                        </span>
+                      </div>
+                    )}
+                    <div className="min-w-0">
+                      <p className="text-sm font-semibold text-text-primary truncate">{candidate.name}</p>
+                      {candidate.gender && (
+                        <p className="text-xs text-text-secondary">{candidate.gender}</p>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </Card>
+          ))}
+        </div>
+      </StudentLayout>
+    );
   }
 
   if (state.phase === "already") {
