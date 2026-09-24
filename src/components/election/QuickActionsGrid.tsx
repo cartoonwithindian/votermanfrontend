@@ -1,7 +1,7 @@
 import React from "react";
 import { Card } from "../ui/Card";
 import { Button } from "../ui/Button";
-import { Users, Vote, BookOpen, ReceiptText } from "lucide-react";
+import { Users, Vote, ReceiptText } from "lucide-react";
 import Link from "next/link";
 
 export const QuickActionsGrid: React.FC = () => {
@@ -17,12 +17,6 @@ export const QuickActionsGrid: React.FC = () => {
       title: "View Candidates",
       description: "Examine candidate profiles, manifestos, and backgrounds.",
       href: "/student/candidates",
-    },
-    {
-      icon: <BookOpen className="w-5 h-5" />,
-      title: "Election Guidelines",
-      description: "Read the rules, policies, and regulations of the election.",
-      href: "/student/guidelines",
     },
     {
       icon: <ReceiptText className="w-5 h-5" />,

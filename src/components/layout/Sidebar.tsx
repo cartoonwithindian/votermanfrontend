@@ -10,7 +10,6 @@ import {
   Vote,
   Users,
   ReceiptText,
-  BookOpen,
   Settings,
   HelpCircle,
   LogOut,
@@ -30,7 +29,6 @@ export const Sidebar: React.FC<SidebarProps> = ({ className, onNavigate }) => {
     { label: "Vote", href: "/student/vote", icon: Vote },
     { label: "Candidates", href: "/student/candidates", icon: Users },
     { label: "My Receipt", href: "/student/receipt", icon: ReceiptText },
-    { label: "Election Guidelines", href: "/student/guidelines", icon: BookOpen },
     { label: "Profile & Settings", href: "/student/profile", icon: Settings },
     { label: "Help & Support", href: "/student/help", icon: HelpCircle },
   ];
