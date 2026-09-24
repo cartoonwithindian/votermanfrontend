@@ -230,7 +230,7 @@ export const adminApi = {
     ),
 
   // Live election results (same read-only results service CAD uses)
-  getElectionResults: (electionId: number) => api.get(`/cad/elections/${electionId}/results`),
+  getElectionResults: (electionId: number | string) => api.get(`/cad/elections/${electionId}/results`),
   getMonitorElections: () => api.get<{ elections: Array<{ id: number; name: string; status: string }> }>("/cad/elections"),
 
   // Announcements management (admin CRUD)

@@ -25,6 +25,7 @@ import {
   Plus,
   Trash2,
   Zap,
+  Trophy,
 } from "lucide-react";
 
 const STATUS_OPTIONS = ["DRAFT", "SCHEDULED", "OPEN", "CLOSED", "PUBLISHED"] as const;
@@ -156,11 +157,33 @@ interface ElectionStats {
   participation: number;
 }
 
+interface ElectionResultsFull {
+  ballots_submitted: number;
+  constituencies: Array<{
+    constituency_id: number | string;
+    constituency_name: string;
+    positions: Array<{
+      position_id: number | string;
+      position_name: string;
+      total_votes: number;
+      candidates: Array<{
+        candidate_id: number | string;
+        candidate_name: string;
+        vote_count: number;
+        percentage: number;
+        rank: number;
+        status: string;
+      }>;
+    }>;
+  }>;
+}
+
 export default function ElectionManagementPage() {
   const [elections, setElections] = useState<AdminElectionRecord[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [stats, setStats] = useState<ElectionStats | null>(null);
   const [turnout, setTurnout] = useState<TurnoutData | null>(null);
+  const [resultsFull, setResultsFull] = useState<ElectionResultsFull | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
@@ -259,18 +282,30 @@ export default function ElectionManagementPage() {
     }
   }, [selectedId]);
 
+  const loadResultsFull = useCallback(async () => {
+    if (selectedId === null) return;
+    try {
+      const data = await adminApi.getElectionResults(selectedId);
+      setResultsFull(data as unknown as ElectionResultsFull);
+    } catch {
+      // stats are supplementary — leave previous values on failure
+    }
+  }, [selectedId]);
+
   useEffect(() => {
     load();
     loadStats();
     loadTurnout();
+    loadResultsFull();
     // Real-time: refresh every 15s so ballots/status stay current
     const t = setInterval(() => {
       load();
       loadStats();
       loadTurnout();
+      loadResultsFull();
     }, 15000);
     return () => clearInterval(t);
-  }, [load, loadStats, loadTurnout]);
+  }, [load, loadStats, loadTurnout, loadResultsFull]);
 
   // Pre-fill date fields when selection changes
   useEffect(() => {
@@ -574,7 +609,7 @@ export default function ElectionManagementPage() {
               Live data from the database — auto-refreshes every 15 seconds.
             </p>
           </div>
-          <Button variant="outline" size="sm" onClick={() => { load(); loadStats(); loadTurnout(); }} className="gap-1.5" disabled={loading}>
+          <Button variant="outline" size="sm" onClick={() => { load(); loadStats(); loadTurnout(); loadResultsFull(); }} className="gap-1.5" disabled={loading}>
             <RefreshCw className={`w-3.5 h-3.5 ${loading ? "animate-spin" : ""}`} />
             Refresh
           </Button>
@@ -884,6 +919,63 @@ export default function ElectionManagementPage() {
                         </table>
                       </div>
                     )}
+                  </Card>
+                )}
+
+                {resultsFull && (resultsFull.constituencies || []).length > 0 && (
+                  <Card className="p-6">
+                    <div className="flex items-center justify-between gap-2 mb-6">
+                      <div className="flex items-center gap-2">
+                        <Trophy className="h-5 w-5 text-warning-600" />
+                        <h2 className="text-lg font-semibold text-text-primary">Candidate Results</h2>
+                      </div>
+                      <Badge variant="info">{Number(resultsFull.ballots_submitted || 0).toLocaleString()} ballots</Badge>
+                    </div>
+                    <div className="space-y-6">
+                      {(resultsFull.constituencies || []).map((ct) => (
+                        <div key={String(ct.constituency_id)}>
+                          <p className="text-sm font-semibold text-text-primary mb-3">{ct.constituency_name}</p>
+                          <div className="space-y-4">
+                            {(ct.positions || []).map((pos) => (
+                              <div key={String(pos.position_id)}>
+                                <p className="text-xs font-medium text-text-secondary uppercase tracking-wider mb-2">
+                                  {pos.position_name} · {Number(pos.total_votes || 0).toLocaleString()} votes
+                                </p>
+                                <div className="overflow-x-auto">
+                                  <table className="w-full text-sm">
+                                    <tbody>
+                                      {(pos.candidates || []).map((c) => (
+                                        <tr key={String(c.candidate_id)} className="border-b border-border/50">
+                                          <td className="py-2.5 pr-3 font-medium text-text-primary">
+                                            <span className="inline-flex items-center gap-2">
+                                              {c.candidate_name}
+                                              {c.status === "winner" && (
+                                                <Badge variant="success">Winner</Badge>
+                                              )}
+                                            </span>
+                                          </td>
+                                          <td className="py-2.5 px-3 w-40">
+                                            <div className="h-2 rounded-full bg-bg-tertiary overflow-hidden">
+                                              <div
+                                                className="h-full rounded-full bg-success"
+                                                style={{ width: `${Math.min(100, Math.max(0, Number(c.percentage) || 0))}%` }}
+                                              />
+                                            </div>
+                                          </td>
+                                          <td className="py-2.5 pl-3 text-right text-text-secondary whitespace-nowrap">
+                                            {Number(c.vote_count || 0).toLocaleString()} ({(Number(c.percentage) || 0).toFixed(1)}%)
+                                          </td>
+                                        </tr>
+                                      ))}
+                                    </tbody>
+                                  </table>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
                   </Card>
                 )}
 
