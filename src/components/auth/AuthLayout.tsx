@@ -74,6 +74,11 @@ export const AuthLayout: React.FC<AuthLayoutProps> = ({ children, className }) =
             <p className="text-[11px] text-text-muted font-medium">
               © 2026 Don Bosco Institute of Technology. Secure &amp; Neutral Student Elections.
             </p>
+            <p className="text-[11px] text-text-muted font-medium mt-1">
+              <a href="https://made-a.tech/" target="_blank" rel="noopener noreferrer" className="underline underline-offset-2">
+                made-a.tech
+              </a>
+            </p>
           </div>
         </div>
       </div>
