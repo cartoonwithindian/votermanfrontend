@@ -5,7 +5,7 @@ import { AdminLayout } from "@/components/admin-dashboard/AdminLayout";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
-import { adminApi, type AdminElectionRecord, type AdminConstituencyRecord, type ApprovedCandidateRow, type StudentClass } from "@/lib/api/admin";
+import { adminApi, type AdminElectionRecord, type AdminConstituencyRecord, type ApprovedCandidateRow, type StudentClass, type TurnoutData } from "@/lib/api/admin";
 import { CourseSelect } from "@/components/ui/CourseSelect";
 import { BatchSelect } from "@/components/ui/BatchSelect";
 import { COURSES, getBatchesForCourse, seatLabel, type Course, type Batch } from "@/lib/class-data";
@@ -160,6 +160,7 @@ export default function ElectionManagementPage() {
   const [elections, setElections] = useState<AdminElectionRecord[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [stats, setStats] = useState<ElectionStats | null>(null);
+  const [turnout, setTurnout] = useState<TurnoutData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
@@ -248,16 +249,28 @@ export default function ElectionManagementPage() {
     }
   }, [selectedId]);
 
+  const loadTurnout = useCallback(async () => {
+    if (selectedId === null) return;
+    try {
+      const data = await adminApi.getTurnout(selectedId);
+      setTurnout(data);
+    } catch {
+      // stats are supplementary — leave previous values on failure
+    }
+  }, [selectedId]);
+
   useEffect(() => {
     load();
     loadStats();
+    loadTurnout();
     // Real-time: refresh every 15s so ballots/status stay current
     const t = setInterval(() => {
       load();
       loadStats();
+      loadTurnout();
     }, 15000);
     return () => clearInterval(t);
-  }, [load, loadStats]);
+  }, [load, loadStats, loadTurnout]);
 
   // Pre-fill date fields when selection changes
   useEffect(() => {
@@ -561,7 +574,7 @@ export default function ElectionManagementPage() {
               Live data from the database — auto-refreshes every 15 seconds.
             </p>
           </div>
-          <Button variant="outline" size="sm" onClick={() => { load(); loadStats(); }} className="gap-1.5" disabled={loading}>
+          <Button variant="outline" size="sm" onClick={() => { load(); loadStats(); loadTurnout(); }} className="gap-1.5" disabled={loading}>
             <RefreshCw className={`w-3.5 h-3.5 ${loading ? "animate-spin" : ""}`} />
             Refresh
           </Button>
@@ -792,6 +805,87 @@ export default function ElectionManagementPage() {
                     </div>
                   )}
                 </Card>
+
+                {turnout && (
+                  <Card className="p-6">
+                    <div className="flex items-center gap-2 mb-6">
+                      <Users className="h-5 w-5 text-primary-600" />
+                      <h2 className="text-lg font-semibold text-text-primary">Class Turnout</h2>
+                    </div>
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
+                      <div className="flex items-center gap-3">
+                        <div className="p-2.5 rounded-xl bg-primary-50">
+                          <Users className="h-5 w-5 text-primary-600" />
+                        </div>
+                        <div className="min-w-0">
+                          <p className="text-lg font-bold leading-tight text-text-primary">{turnout.totals.total_authorized.toLocaleString()}</p>
+                          <p className="text-xs text-text-secondary">Students</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <div className="p-2.5 rounded-xl bg-success-50">
+                          <CheckCircle2 className="h-5 w-5 text-success-600" />
+                        </div>
+                        <div className="min-w-0">
+                          <p className="text-lg font-bold leading-tight text-text-primary">{turnout.totals.total_voted.toLocaleString()}</p>
+                          <p className="text-xs text-text-secondary">Done Voting</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <div className="p-2.5 rounded-xl bg-warning-50">
+                          <AlertTriangle className="h-5 w-5 text-warning-600" />
+                        </div>
+                        <div className="min-w-0">
+                          <p className="text-lg font-bold leading-tight text-text-primary">{turnout.totals.total_pending.toLocaleString()}</p>
+                          <p className="text-xs text-text-secondary">Left To Vote</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <div className="p-2.5 rounded-xl bg-primary-50">
+                          <BarChart3 className="h-5 w-5 text-primary-600" />
+                        </div>
+                        <div className="min-w-0">
+                          <p className="text-lg font-bold leading-tight text-text-primary">{turnout.totals.participation_pct}%</p>
+                          <p className="text-xs text-text-secondary">Turnout</p>
+                        </div>
+                      </div>
+                    </div>
+                    {turnout.classes.length === 0 ? (
+                      <p className="text-sm text-text-secondary">No classes in this election yet.</p>
+                    ) : (
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-sm">
+                          <thead>
+                            <tr className="border-b border-border">
+                              <th className="text-left py-2 px-3 font-medium text-text-secondary">Class</th>
+                              <th className="text-right py-2 px-3 font-medium text-text-secondary">Students</th>
+                              <th className="text-right py-2 px-3 font-medium text-text-secondary">Voted</th>
+                              <th className="text-right py-2 px-3 font-medium text-text-secondary">Left</th>
+                              <th className="text-right py-2 px-3 font-medium text-text-secondary">Turnout</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {turnout.classes.map((c) => (
+                              <tr key={`${c.department}|${c.year}|${c.section}`} className="border-b border-border/50">
+                                <td className="py-3 px-3 font-medium text-text-primary">
+                                  {c.department} · {c.year}{c.section ? ` · Sec ${c.section}` : ""}
+                                </td>
+                                <td className="py-3 px-3 text-right text-text-primary">{c.total_authorized}</td>
+                                <td className="py-3 px-3 text-right text-success-600 font-semibold">{c.voted}</td>
+                                <td className="py-3 px-3 text-right text-text-primary">{c.pending}</td>
+                                <td className="py-3 px-3 text-right">
+                                  <Badge variant={c.participation_pct >= 50 ? "success" : c.participation_pct > 0 ? "warning" : "neutral"}>
+                                    {c.participation_pct}%
+                                  </Badge>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+                  </Card>
+                )}
 
                 {/* Class Representative Constituencies */}
                 <Card className="p-6">

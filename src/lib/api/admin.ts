@@ -121,6 +121,30 @@ export interface StudentClass {
   student_count: number;
 }
 
+export interface TurnoutPendingVoter {
+  studentId: number | string;
+  student_id: string | null;
+  name: string;
+  roll_number: string | null;
+}
+
+export interface TurnoutClass {
+  department: string;
+  year: string;
+  section: string;
+  total_authorized: number;
+  voted: number;
+  pending: number;
+  participation_pct: number;
+  pending_voters: TurnoutPendingVoter[];
+}
+
+export interface TurnoutData {
+  election: { id: number | string; name: string; status: string };
+  totals: { total_authorized: number; total_voted: number; total_pending: number; participation_pct: number };
+  classes: TurnoutClass[];
+}
+
 export interface AdminAnnouncementRecord {
   id: number;
   title: string;
@@ -231,6 +255,7 @@ export const adminApi = {
   updateElectionStatus: (id: number | string, status: string) =>
     api.patch(`/admin/elections/${id}/status`, { status }),
   getReadiness: (id: number | string) => api.get<Record<string, unknown>>(`/admin/elections/${id}/readiness`),
+  getTurnout: (id: number | string) => api.get<TurnoutData>(`/admin/elections/${id}/turnout`),
 
   // ---- Positions management (real /admin/positions + /positions) ----
   getPositions: () => api.get<{ data: AdminPositionRecord[] } | AdminPositionRecord[]>("/positions?active_only=false"),
