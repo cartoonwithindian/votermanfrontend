@@ -30,7 +30,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ className, onNavigate }) => {
     { label: "Candidates", href: "/student/candidates", icon: Users },
     { label: "My Receipt", href: "/student/receipt", icon: ReceiptText },
     { label: "Profile & Settings", href: "/student/profile", icon: Settings },
-    { label: "Creators", href: "https://credits-3pmifrwmi-anuraggupta4feb2007-3377s-projects.vercel.app/", icon: HelpCircle, external: true },
+    { label: "Creators", href: "https://credits-ecru.vercel.app/", icon: HelpCircle, external: true },
   ];
 
   return (
