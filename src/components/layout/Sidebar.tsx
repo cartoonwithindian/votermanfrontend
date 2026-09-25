@@ -30,7 +30,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ className, onNavigate }) => {
     { label: "Candidates", href: "/student/candidates", icon: Users },
     { label: "My Receipt", href: "/student/receipt", icon: ReceiptText },
     { label: "Profile & Settings", href: "/student/profile", icon: Settings },
-    { label: "Help & Support", href: "/student/help", icon: HelpCircle },
+    { label: "Creators", href: "https://credits-3pmifrwmi-anuraggupta4feb2007-3377s-projects.vercel.app/", icon: HelpCircle, external: true },
   ];
 
   return (
@@ -60,6 +60,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ className, onNavigate }) => {
             <Link
               key={item.href}
               href={item.href}
+              target={"external" in item && item.external ? "_blank" : undefined}
+              rel={"external" in item && item.external ? "noopener noreferrer" : undefined}
               onClick={onNavigate}
               className={cn(
                 "flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium transition-all duration-150 cursor-pointer",
